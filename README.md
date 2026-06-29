@@ -1,7 +1,7 @@
 # code-security-auditor
 
-코드를 투입하면 **보안 취약점을 탐지**하고, **수정 가이드까지 포함한 레포트**(Markdown/HTML/PDF)를
-자동으로 생성하는 Claude Code repo입니다.
+코드를 투입하면 **보안 취약점을 탐지**하고, **수정 가이드까지 포함한 레포트**(Markdown/HTML)를
+자동으로 생성하는 Claude Code repo입니다. (PDF가 필요하면 HTML을 브라우저에서 Ctrl+P로 저장)
 
 방어적 보안(defensive security)을 위한 도구로, 취약점을 찾아 고치는 것을 목표로 합니다.
 
@@ -11,7 +11,7 @@
 - OWASP Top 10 / CWE Top 25 기반의 체계적 점검
 - 정적분석 도구(Semgrep, Bandit 등) + Claude 심층 분석 결합 (모드 선택 가능)
 - 발견 항목마다 위치·심각도·공격 시나리오(개념)·수정 코드(Before/After) 제공
-- 레포트를 Markdown + HTML + PDF로 export
+- 레포트를 Markdown + HTML로 export (PDF는 HTML에서 브라우저 인쇄로 저장)
 
 ## 빠른 시작
 
@@ -24,20 +24,25 @@ cd code-security-auditor
 
 이 디렉토리에서 Claude Code를 실행하면 `CLAUDE.md`, 슬래시 명령, 스킬이 자동 인식됩니다.
 
-### 2. (선택) 분석 도구 설치
+### 2. 의존성 설치
 
-`hybrid` 또는 `sast-only` 모드를 쓰려면 아래 중 필요한 것을 설치합니다.
+레포트(HTML) 생성을 위해 `markdown` 패키지가 필요합니다. (클론 후 1회)
+
+```bash
+python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markdown)
+```
+
+선택적으로 SAST 도구를 설치하면 `hybrid`/`sast-only` 모드를 쓸 수 있습니다.
 미설치 시 자동으로 `claude-only` 모드로 폴백됩니다.
 
 ```bash
-pip install -r tools/requirements.txt   # 레포트 빌더(HTML/PDF)
 pip install semgrep bandit pip-audit     # SAST 도구 (선택)
 # gitleaks 는 https://github.com/gitleaks/gitleaks 참고
 ```
 
-PDF 생성용 weasyprint는 시스템 라이브러리(cairo, pango)가 필요합니다.
-- Ubuntu/Debian: `sudo apt-get install libcairo2 libpango-1.0-0 libpangocairo-1.0-0`
-- macOS: `brew install cairo pango`
+PDF는 별도 설치 없이, 생성된 HTML을 브라우저에서 열고 **Ctrl+P → "PDF로 저장"** 으로 만듭니다.
+(자동 PDF 생성이 꼭 필요하면 weasyprint를 설치하고 빌더에 `--pdf` 옵션을 붙이면 되지만,
+윈도우에서는 GTK 런타임 추가 설치가 필요하므로 기본 경로로는 권장하지 않습니다.)
 
 ### 3. 분석 실행
 
@@ -58,8 +63,7 @@ PDF 생성용 weasyprint는 시스템 라이브러리(cairo, pango)가 필요합
 ```
 reports/
   2606291651_security_report.md
-  2606291651_security_report.html
-  2606291651_security_report.pdf
+  2606291651_security_report.html   ← 브라우저로 열고 Ctrl+P로 PDF 저장 가능
 ```
 
 파일명은 한국시각(KST) 기준 `yymmddhhmm_` 접두어가 붙습니다.
@@ -86,7 +90,7 @@ code-security-auditor/
 │   └── skills/security-audit/SKILL.md # 취약점 분석 방법론
 ├── tools/
 │   ├── run_sast.sh                   # SAST 실행 래퍼
-│   ├── build_report.py               # MD → HTML/PDF 변환
+│   ├── build_report.py               # MD → HTML 변환 (PDF는 선택)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
 ├── input/                            # 분석 대상 코드 투입 (git 무시)

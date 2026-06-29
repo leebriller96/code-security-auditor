@@ -15,7 +15,7 @@
 1. 사용자가 `input/` 디렉토리에 분석 대상 코드/디렉토리를 넣거나, 채팅에 코드를 붙여넣습니다.
 2. 사용자가 `/scan` 슬래시 명령을 실행합니다.
 3. Claude Code가 `.claude/skills/security-audit/SKILL.md`의 방법론에 따라 분석합니다.
-4. 결과를 `reports/`에 레포트로 생성합니다 (MD + HTML + PDF).
+4. 결과를 `reports/`에 레포트로 생성합니다 (MD + HTML). PDF가 필요하면 HTML을 브라우저에서 Ctrl+P로 저장합니다.
 
 자세한 분석 방법론은 `.claude/skills/security-audit/SKILL.md`를 따릅니다.
 
