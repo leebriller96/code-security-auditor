@@ -108,8 +108,15 @@ SAST 결과 처리 원칙:
 
 1. Markdown: `reports/<KST타임스탬프>_security_report.md`
    - 타임스탬프: `TZ=Asia/Seoul date '+%y%m%d%H%M'`
-2. HTML + PDF: `python3 tools/build_report.py reports/<...>.md`
-   - 같은 디렉토리에 `.html`, `.pdf` 동시 생성.
+     (윈도우 PowerShell이면 `Get-Date -Format 'yyMMddHHmm'`)
+2. HTML + PDF: 레포트 빌더를 실행한다. (운영체제에 맞는 파이썬 명령 사용)
+   - 윈도우: `python tools/build_report.py reports/<...>.md`
+   - macOS/Linux: `python3 tools/build_report.py reports/<...>.md`
+   - 같은 디렉토리에 `.html`, `.pdf`가 생성된다.
+   - **반드시 `.html` 생성 여부를 확인**한다. 없으면 빌더가 실패한 것이므로
+     `markdown` 패키지 설치 여부(`python -m pip install markdown`)를 점검하고 재실행한다.
+   - `.pdf`는 weasyprint+GTK 미설치 시 생성되지 않을 수 있으며, 이때는 HTML을
+     브라우저에서 인쇄(Ctrl+P → PDF로 저장)하도록 안내한다.
 
 ## 7. 품질 자가 점검 (레포트 제출 전)
 

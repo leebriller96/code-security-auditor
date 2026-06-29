@@ -36,7 +36,17 @@ argument-hint: "[hybrid|claude-only|sast-only] (생략 시 hybrid)"
 - `templates/report_template.md` 구조에 맞춰 Markdown 레포트를 작성합니다.
 - 파일명: `reports/<KST타임스탬프>_security_report.md`
   - 타임스탬프는 `TZ=Asia/Seoul date '+%y%m%d%H%M'` 로 생성.
-- 작성 후 `python3 tools/build_report.py <md경로>` 를 실행해 HTML과 PDF를 함께 생성합니다.
+    (윈도우 PowerShell이면 `Get-Date -Format 'yyMMddHHmm'`)
+- 작성 후 **반드시** 레포트 빌더를 실행해 HTML과 PDF를 함께 생성합니다.
+  - 파이썬 실행 명령은 운영체제에 맞게 선택합니다.
+    - 윈도우: `python tools/build_report.py <md경로>`
+    - macOS/Linux: `python3 tools/build_report.py <md경로>`
+  - `markdown` 패키지가 없다는 에러가 나면 `python -m pip install markdown`(윈도우) /
+    `python3 -m pip install markdown`(그 외) 로 설치 후 다시 실행합니다.
+- **생성 검증**: 빌더 실행 뒤 `reports/`에 같은 이름의 `.html`이 실제로 생겼는지 확인합니다.
+  - `.html`이 없으면 빌더 실행이 실패한 것이므로 에러 메시지를 사용자에게 그대로 전달합니다.
+  - `.pdf`는 weasyprint+GTK 미설치 시 생성되지 않을 수 있습니다. 이때는 사용자에게
+    "HTML을 브라우저에서 열고 Ctrl+P로 PDF 저장" 대안을 안내합니다.
 
 ### 6단계 — 요약 보고
 - 채팅에 핵심 요약(총 발견 수, 심각도 분포, Top 3 우선 조치 항목)을 두괄식으로 보고합니다.
