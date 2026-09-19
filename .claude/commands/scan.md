@@ -68,13 +68,18 @@ argument-hint: "[hybrid|claude-only|sast-only] [대상경로] [--diff] [--only <
   - `markdown` 패키지가 없다는 에러가 나면 `python -m pip install -r tools/requirements.txt` 로 설치 후 다시 실행합니다.
 - **생성 검증**: 빌더 실행 뒤 `reports/`에 같은 이름의 `.html`이 실제로 생겼는지 확인합니다.
   - `.html`이 없으면 빌더 실행이 실패한 것이므로 에러 메시지를 사용자에게 그대로 전달합니다.
+- **기계 판독 출력**: `python tools/export_findings.py <md경로> --sarif` 로 `.findings.json`·`.sarif` 를 생성합니다.
+  파싱 경고가 나오면 레포트의 필드 형식을 고치고 재실행합니다.
+- **이전 감사 비교**: `reports/` 에 같은 대상의 이전 레포트가 있으면 `python tools/report_diff.py <이전> <현재>` 결과를
+  레포트 "이전 감사 대비 변화" 섹션에 넣고 HTML 을 다시 빌드합니다. (첫 감사면 해당 섹션 삭제)
 - **PDF 안내**: PDF는 자동 생성하지 않습니다. 생성된 HTML을 브라우저에서 열고
   Ctrl+P(Mac은 Cmd+P) → "PDF로 저장"을 사용하도록 안내합니다.
   (PDF 자동 생성이 꼭 필요한 사용자는 weasyprint 설치 후 `--pdf` 옵션을 붙이면 됩니다.)
 
 ### 6단계 — 요약 보고
 - 채팅에 핵심 요약(총 발견 수, 심각도 분포, Top 3 우선 조치 항목)을 두괄식으로 보고합니다.
-- 생성된 레포트 파일 경로(MD/HTML)를 안내하고, PDF는 HTML을 브라우저에서 Ctrl+P로 저장하면 된다고 덧붙입니다.
+- 생성된 레포트 파일 경로(MD/HTML/findings.json/sarif)를 안내하고, PDF는 HTML을 브라우저에서 Ctrl+P로 저장하면 된다고 덧붙입니다.
+- 재스캔이었다면 신규/잔존/해결 건수도 함께 보고합니다.
 
 ## 주의
 - 악용 가능한 완성형 익스플로잇은 생성하지 않습니다. 공격 시나리오는 개념 수준으로만 기술합니다.

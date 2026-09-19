@@ -54,6 +54,25 @@ description: 소스 코드의 보안 취약점을 체계적으로 탐지하고, 
 
 각 항목에 대해 코드에서 해당 패턴을 탐지하고, 발견 시 데이터 흐름으로 검증합니다.
 
+### OWASP Top 10 매핑 (2025 기준, 2021 병기)
+
+레포트의 "분류" 필드에는 **OWASP Top 10:2025** ID 를 씁니다. 기억에 의존하지 말고 아래 표로 매핑합니다.
+
+| 2025 | 분류 | 2021 대응 | 대표 CWE |
+|------|------|-----------|----------|
+| A01:2025 | Broken Access Control | A01:2021 (+ SSRF A10:2021 편입) | CWE-22, 284, 285, 352, 601, 639, 862, 863, 918 |
+| A02:2025 | Security Misconfiguration | A05:2021 | CWE-16, 489, 611, 942, 1004, 614 |
+| A03:2025 | Software Supply Chain Failures | A06:2021 확장 | CWE-1104, 1395, 494, 829 |
+| A04:2025 | Cryptographic Failures | A02:2021 | CWE-259, 311, 319, 321, 326, 327, 328, 330, 916 |
+| A05:2025 | Injection | A03:2021 | CWE-20, 74, 77, 78, 79, 89, 90, 94, 95, 943, 1336 |
+| A06:2025 | Insecure Design | A04:2021 | CWE-256, 501, 522, 565, 602, 840 |
+| A07:2025 | Authentication Failures | A07:2021 | CWE-287, 306, 307, 384, 521, 613, 620, 798 |
+| A08:2025 | Software or Data Integrity Failures | A08:2021 | CWE-345, 353, 426, 502, 830, 915 |
+| A09:2025 | Security Logging & Alerting Failures | A09:2021 | CWE-117, 223, 532, 778 |
+| A10:2025 | Mishandling of Exceptional Conditions | 신설 | CWE-209, 248, 252, 390, 391, 703, 754, 755 |
+
+표기 예: `CWE-89, OWASP A05:2025 Injection`. 독자가 2021 판에 익숙하면 `(구 A03:2021)` 을 덧붙입니다.
+
 ### 인젝션 계열
 - **SQL/NoSQL Injection** (CWE-89/943): 문자열 연결/포맷으로 쿼리 구성, NoSQL 연산자 주입(`$where`, `$gt`). → 파라미터 바인딩 확인.
 - **OS Command Injection** (CWE-78): `os.system`, `subprocess(shell=True)`, `child_process.exec`, `Runtime.exec`에 외부 입력.
@@ -170,6 +189,13 @@ SAST 결과 처리 원칙:
 4. PDF: 자동 생성하지 않는다. 생성된 HTML을 브라우저에서 열고 Ctrl+P(Mac은 Cmd+P) →
    "PDF로 저장"을 사용하도록 안내한다. (HTML에 이 안내 배너가 이미 포함돼 있다)
    - PDF 자동 생성이 꼭 필요하면 weasyprint 설치 후 `--pdf` 옵션을 붙여 실행한다.
+5. 기계 판독 출력: `python tools/export_findings.py reports/<...>.md --sarif`
+   - 레포트 Markdown 을 파싱해 `.findings.json`(요약·항목 목록)과 `.sarif`(GitHub Code Scanning 업로드용)를 만든다.
+   - "심각도 또는 위치를 읽지 못한 항목" 경고가 나오면 해당 항목의 필드 형식(`- **심각도**: X`, `` - **위치**: `파일:라인` ``)을 고친다.
+6. 이전 감사와 비교: `reports/` 에 같은 대상의 이전 레포트가 있으면
+   `python tools/report_diff.py <이전.md> <현재.md>` 결과를 현재 레포트의 "우선 조치 로드맵" 앞에
+   **"이전 감사 대비 변화"** 섹션으로 넣고 HTML 을 다시 빌드한다. "해결" 로 분류된 항목은 이전 위치의 코드를 열어
+   실제로 고쳐졌는지 확인하고, 고쳐지지 않았다면 이번 분석이 놓친 것이므로 다시 분석한다.
 
 ## 7. 품질 자가 점검 (레포트 제출 전)
 

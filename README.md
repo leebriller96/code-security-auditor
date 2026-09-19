@@ -8,7 +8,7 @@
 ## 무엇을 하나요
 
 - `input/`에 코드를 넣거나 코드를 붙여넣고 `/scan` 한 번이면 끝
-- OWASP Top 10 / CWE Top 25 기반의 체계적 점검
+- OWASP Top 10:2025 / CWE Top 25 기반의 체계적 점검
 - 정적분석 도구(Semgrep, Bandit 등) + Claude 심층 분석 결합 (모드 선택 가능)
 - 발견 항목마다 위치·심각도·공격 시나리오(개념)·수정 코드(Before/After) 제공
 - 레포트를 Markdown + HTML로 export (PDF는 HTML에서 브라우저 인쇄로 저장)
@@ -76,8 +76,12 @@ PDF는 별도 설치 없이, 생성된 HTML을 브라우저에서 열고 **Ctrl+
 ```
 reports/
   2606291651_security_report.md
-  2606291651_security_report.html   ← 브라우저로 열고 Ctrl+P로 PDF 저장 가능
+  2606291651_security_report.html            ← 브라우저로 열고 Ctrl+P로 PDF 저장 가능
+  2606291651_security_report.findings.json   ← 기계 판독용 (CI 게이트, 통계)
+  2606291651_security_report.sarif           ← GitHub Code Scanning 업로드용
 ```
+
+재스캔 시 `python tools/report_diff.py <이전.md> <현재.md>` 로 신규/잔존/해결 항목을 비교할 수 있습니다.
 
 파일명은 한국시각(KST) 기준 `yymmddhhmm_` 접두어가 붙습니다.
 
@@ -105,6 +109,8 @@ code-security-auditor/
 │   ├── run_sast.py                   # SAST 실행 래퍼 (설치된 도구만 실행, 결과/로그 수집)
 │   ├── summarize_sast.py             # 도구별 JSON → 하나의 정규화 표 (Claude 가 읽는 입력)
 │   ├── build_report.py               # MD → HTML 변환 (심각도 배지·목차·구문강조, PDF는 선택)
+│   ├── export_findings.py            # 레포트 MD → findings.json / SARIF
+│   ├── report_diff.py                # 두 레포트 비교 (신규/잔존/해결)
 │   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
