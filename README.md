@@ -42,7 +42,8 @@ pip install semgrep bandit pip-audit     # SAST 도구 (선택)
 ```
 
 SAST 러너는 `python tools/run_sast.py <대상경로>` 로 직접 실행할 수도 있습니다.
-결과는 `reports/.sast/` 에 도구별 JSON·로그·`summary.json` 으로 남습니다.
+결과는 `reports/.sast/` 에 도구별 JSON·로그·`summary.json` 으로 남고,
+`python tools/summarize_sast.py` 로 도구별 결과를 하나의 표로 정규화해 볼 수 있습니다.
 
 PDF는 별도 설치 없이, 생성된 HTML을 브라우저에서 열고 **Ctrl+P → "PDF로 저장"** 으로 만듭니다.
 (자동 PDF 생성이 꼭 필요하면 weasyprint를 설치하고 빌더에 `--pdf` 옵션을 붙이면 되지만,
@@ -94,13 +95,26 @@ code-security-auditor/
 │   └── skills/security-audit/SKILL.md # 취약점 분석 방법론
 ├── tools/
 │   ├── run_sast.py                   # SAST 실행 래퍼 (설치된 도구만 실행, 결과/로그 수집)
+│   ├── summarize_sast.py             # 도구별 JSON → 하나의 정규화 표 (Claude 가 읽는 입력)
 │   ├── build_report.py               # MD → HTML 변환 (심각도 배지·목차·구문강조, PDF는 선택)
 │   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
+├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md)
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)
 └── CLAUDE.md                         # 프로젝트 규칙/컨텍스트
+```
+
+## 도구 검증 (샘플 취약 앱)
+
+`examples/vulnerable-flask/` 는 의도적으로 취약하게 만든 소형 Flask 앱입니다. 방법론이나 스크립트를 수정한 뒤
+아래처럼 돌려 보고 `EXPECTED.md` 의 기대 발견 목록·합격 기준과 비교하면 회귀를 확인할 수 있습니다.
+
+```bash
+cp -r examples/vulnerable-flask input/     # PowerShell: Copy-Item -Recurse examples/vulnerable-flask input/
+# Claude Code 에서:
+/scan
 ```
 
 ## 주의사항

@@ -29,6 +29,7 @@ argument-hint: "[hybrid|claude-only|sast-only] (생략 시 hybrid)"
 - `hybrid` 또는 `sast-only`: `python tools/run_sast.py <대상경로>`를 실행해 SAST 결과를 수집합니다.
   - 종료 코드 2(실행 가능한 도구 없음)이면 설치 명령을 안내하고 `claude-only`로 자동 폴백합니다.
   - 실행/실패/건너뜀 상태는 stdout 요약 표와 `reports/.sast/summary.json`에서 확인하고, 실패한 도구는 `.log`로 사유를 파악합니다.
+  - 이어서 `python tools/summarize_sast.py` 로 정규화된 표를 읽습니다. (원본 JSON 은 직접 읽지 않습니다)
 - `hybrid` 또는 `claude-only`: SKILL.md의 취약점 체크리스트에 따라 코드를 직접 정독하며 분석합니다.
 - `hybrid`: SAST가 놓친 로직 취약점은 Claude 분석으로 보완하고, SAST 오탐(false positive)은 검증해 걸러냅니다.
 

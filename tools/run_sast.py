@@ -19,6 +19,7 @@
 #   - 도구가 실패해도 조용히 넘어가지 않고 상태/사유를 남긴다.
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,10 @@ EXCLUDE_DIRS = [
     "__pycache__", ".tox", ".mypy_cache", ".pytest_cache", "target", ".idea", ".vscode",
 ]
 TOOL_TIMEOUT_SEC = 900
+
+# 파이썬 기반 도구(bandit, pip-audit, semgrep)가 한글 주석이 든 파일을 로케일 인코딩(cp949)으로 읽다
+# 실패하지 않도록 자식 프로세스를 UTF-8 모드로 실행한다.
+CHILD_ENV = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
 
 results = []  # 도구별 실행 결과 레코드
 
@@ -69,7 +74,7 @@ def run(cmd, log_path: Path, cwd=None):
     """도구를 실행하고 (returncode, stdout) 을 돌려준다. stderr 는 로그 파일로 남긴다."""
     try:
         proc = subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True,
+            cmd, cwd=cwd, env=CHILD_ENV, capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=TOOL_TIMEOUT_SEC,
         )
     except subprocess.TimeoutExpired:
@@ -180,8 +185,8 @@ def run_pip_audit(target: Path):
         data = save_json_stdout(stdout, out) if stdout else None
         if data is None:
             record(tool, "실패", extra={"file": str(rel)},
-                   reason=f"exit={rc}. 버전이 == 로 고정되지 않은 의존성은 감사 불가 "
-                          f"(대상 코드 실행 방지를 위해 의존성 해석을 하지 않음). {log.name} 확인")
+                   reason=f"exit={rc}. {log.name} 확인 (버전이 == 로 고정되지 않은 의존성은 감사 불가 — "
+                          f"대상 코드 실행 방지를 위해 의존성 해석을 하지 않음)")
             continue
         n = sum(len(d.get("vulns", [])) for d in data.get("dependencies", []))
         record(tool, "실행", output=out, findings=n, extra={"file": str(rel)})
