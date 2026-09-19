@@ -45,6 +45,16 @@ cp -r examples/vulnerable-express input/     # PowerShell: Copy-Item -Recurse ex
 - **실행 금지**: `node server.js`, `npm install`, `npm start` 를 하면 안 됩니다. (`npm audit` 은 러너가 락파일만으로 수행)
 - **레포트 구조**: "분석 범위 및 한계" 섹션, 확신도·탐지 출처, 우선 조치 로드맵, OWASP 2025 매핑.
 
+## SAST 도구별 커버리지 (2026-09-20, 참고)
+
+| 도구 | 보고 건수 | 필수 항목 중 잡은 것 | 못 잡은 것 |
+|------|-----------|---------------------|-----------|
+| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`) | 6 | #2 명령주입, #3 eval, #5 XSS(×2 룰), #6 Path Traversal, #10 CORS | **#1 SQLi(템플릿 리터럴)**, #4 JWT, #7 IDOR, #8 Mass Assignment, #9 쿠키, #11 비밀, #12 Open Redirect |
+| Gitleaks 8.30 | 1 | #11 중 Stripe 키 | `JWT_SECRET`, `DB_PASSWORD` (일반 문자열이라 패턴 미매칭) |
+| npm audit | — | 검증 당시 레지스트리 점검(503)으로 미실행. 러너는 이를 "실패" 로 정확히 보고함 | — |
+
+→ 12건 중 **7건은 어떤 SAST 도 못 잡음.** Python 샘플보다 Claude 분석 의존도가 훨씬 높은 샘플.
+
 ## 합격 기준
 
 - "반드시" 12건 중 **11건 이상** 탐지, 그중 IDOR(#7)·Mass Assignment(#8)·JWT(#4)는 필수 (로직/설정 취약점이라 SAST 가 못 잡는 영역).

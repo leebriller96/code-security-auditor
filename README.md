@@ -36,9 +36,8 @@ python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markd
 미설치 시 자동으로 `claude-only` 모드로 폴백됩니다.
 
 ```bash
-pip install semgrep bandit pip-audit     # SAST 도구 (선택)
-# gitleaks 는 https://github.com/gitleaks/gitleaks 참고
-# 윈도우: bandit/pip-audit 는 그대로 동작, semgrep 은 WSL 또는 Docker 사용을 권장
+pip install semgrep bandit pip-audit     # SAST 도구 (선택) — 윈도우 포함 네이티브 동작 확인 (semgrep 1.177)
+# gitleaks: https://github.com/gitleaks/gitleaks/releases 에서 OS 별 zip 을 받아 PATH 에 추가 (8.30 확인)
 ```
 
 SAST 러너는 `python tools/run_sast.py <대상경로>` 로 직접 실행할 수도 있습니다.

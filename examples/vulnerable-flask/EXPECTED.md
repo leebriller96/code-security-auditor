@@ -52,5 +52,16 @@ cp -r examples/vulnerable-flask input/     # 윈도우 PowerShell: Copy-Item -Re
 |-----------|-------------|------|------|
 | 2026-09-20 | hybrid / Bandit + pip-audit + Claude | **합격** — 필수 10/10, 심각도 불일치 1건(#8 MD5 → High), 방법론 4/4 | Bandit 단독으로는 #4 SSTI, #5 Path Traversal, #6 IDOR, #9 Open Redirect, `config.py:4` AWS Key ID 를 못 잡음 → Claude 분석이 보완. 결과물: `sample_report.md` |
 
+### SAST 도구별 커버리지 (2026-09-20, 참고)
+
+| 도구 | 보고 건수 | 필수 항목 중 잡은 것 | 못 잡은 것 |
+|------|-----------|---------------------|-----------|
+| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`) | 14 | #1 SQLi, #2 명령주입, #3 pickle, #4 SSTI, #8 MD5, #9 Open Redirect, #10 debug | #5 Path Traversal, #6 IDOR, #7 하드코딩 비밀 |
+| Bandit | 11 | #1(Medium), #2, #3, #8, #10, #7 일부(B105 ×3) | #4, #5, #6, #9, `config.py:4` AWS Key ID |
+| Gitleaks 8.30 | 0 | — | `AKIA...EXAMPLE` 은 AWS 공식 예시 키라 gitleaks 허용목록에 있음 (실제 키 형식이면 탐지됨) |
+| pip-audit | 16 (중복 병합 후) | 의존성 CVE 전부 | — |
+
+→ **IDOR(#6)·Path Traversal(#5)은 어떤 도구도 못 잡음.** Claude 분석이 반드시 채워야 하는 영역.
+
 `sample_report.md` 는 이 검증에서 실제로 생성된 레포트입니다. 레포트 형식·서술 수준의 참고 예시로 쓰세요.
 (`python tools/build_report.py examples/vulnerable-flask/sample_report.md` 로 HTML 을 만들어 볼 수 있습니다.)

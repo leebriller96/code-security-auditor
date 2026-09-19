@@ -111,7 +111,7 @@ def save_json_stdout(stdout: str, path: Path):
 def run_semgrep(target: Path):
     tool = "semgrep"
     if not have("semgrep"):
-        return record(tool, "미설치", reason="설치: pip install semgrep (윈도우는 WSL/Docker 권장)")
+        return record(tool, "미설치", reason="설치: pip install semgrep (윈도우 네이티브 동작 확인: 1.177)")
     print(f"[run_sast] Semgrep 실행 중... (룰셋을 네트워크에서 받으므로 시간이 걸릴 수 있음)")
     out, log = OUT_DIR / "semgrep.json", OUT_DIR / "semgrep.log"
     cmd = ["semgrep", "--config", "p/security-audit", "--config", "p/owasp-top-ten",
@@ -149,7 +149,7 @@ def run_bandit(target: Path):
 def run_gitleaks(target: Path):
     tool = "gitleaks"
     if not have("gitleaks"):
-        return record(tool, "미설치", reason="설치: https://github.com/gitleaks/gitleaks")
+        return record(tool, "미설치", reason="설치: https://github.com/gitleaks/gitleaks/releases (zip 풀어 PATH 에 추가, 8.30 확인)")
     print("[run_sast] Gitleaks(비밀값) 실행 중...")
     out, log = OUT_DIR / "gitleaks.json", OUT_DIR / "gitleaks.log"
     common = ["--report-format", "json", "--report-path", str(out), "--exit-code", "0", "--no-banner"]
