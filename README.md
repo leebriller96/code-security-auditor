@@ -104,7 +104,9 @@ reports/
 code-security-auditor/
 ├── .claude/
 │   ├── commands/scan.md              # /scan 슬래시 명령
-│   └── skills/security-audit/SKILL.md # 취약점 분석 방법론
+│   ├── skills/security-audit/SKILL.md # 취약점 분석 방법론
+│   ├── skills/security-audit/sinks.md # 언어별 source/sink 치트시트
+│   └── settings.json                 # 도구 스크립트 사전 허용 / 대상 코드 실행·수정 차단
 ├── tools/
 │   ├── run_sast.py                   # SAST 실행 래퍼 (설치된 도구만 실행, 결과/로그 수집)
 │   ├── summarize_sast.py             # 도구별 JSON → 하나의 정규화 표 (Claude 가 읽는 입력)
@@ -116,7 +118,6 @@ code-security-auditor/
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
 ├── templates/auditignore.example     # .auditignore 형식 예시
-├── .claude/settings.json             # 도구 스크립트 사전 허용 / 대상 코드 실행·수정 차단
 ├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md) + 샘플 레포트
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)

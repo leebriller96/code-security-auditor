@@ -53,6 +53,8 @@ description: 소스 코드의 보안 취약점을 체계적으로 탐지하고, 
 ## 2. 취약점 체크리스트 (OWASP Top 10 + CWE Top 25 기반)
 
 각 항목에 대해 코드에서 해당 패턴을 탐지하고, 발견 시 데이터 흐름으로 검증합니다.
+언어·프레임워크별 구체적인 source/sink 식별자 목록은 같은 디렉토리의 **`sinks.md`** 를 참고합니다
+(Python / JavaScript·TypeScript / Java·Kotlin). 정독 전에 `sinks.md` 의 식별자로 grep 해 후보 지점을 먼저 뽑으면 누락이 줄어듭니다.
 
 ### OWASP Top 10 매핑 (2025 기준, 2021 병기)
 
