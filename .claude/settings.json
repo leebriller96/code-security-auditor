@@ -11,6 +11,8 @@
       "Bash(python3 tools/export_findings.py:*)",
       "Bash(python tools/report_diff.py:*)",
       "Bash(python3 tools/report_diff.py:*)",
+      "Bash(python tools/selftest.py:*)",
+      "Bash(python3 tools/selftest.py:*)",
       "Bash(python tools/kst_now.py:*)",
       "Bash(python3 tools/kst_now.py:*)",
       "Bash(python -m pip install -r tools/requirements.txt)",

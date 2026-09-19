@@ -112,6 +112,7 @@ code-security-auditor/
 │   ├── export_findings.py            # 레포트 MD → findings.json / SARIF
 │   ├── report_diff.py                # 두 레포트 비교 (신규/잔존/해결)
 │   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)
+│   ├── selftest.py                   # 위 스크립트들의 회귀 테스트 (python tools/selftest.py)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
 ├── templates/auditignore.example     # .auditignore 형식 예시
@@ -122,7 +123,15 @@ code-security-auditor/
 └── CLAUDE.md                         # 프로젝트 규칙/컨텍스트
 ```
 
-## 도구 검증 (샘플 취약 앱)
+## 도구 검증
+
+스크립트나 템플릿을 고쳤다면 먼저 회귀 테스트를 돌립니다 (외부 SAST 도구 없이 몇 초면 끝납니다).
+
+```bash
+python tools/selftest.py
+```
+
+### 샘플 취약 앱 (방법론 검증)
 
 `examples/vulnerable-flask/` 는 의도적으로 취약하게 만든 소형 Flask 앱입니다. 방법론이나 스크립트를 수정한 뒤
 아래처럼 돌려 보고 `EXPECTED.md` 의 기대 발견 목록·합격 기준과 비교하면 회귀를 확인할 수 있습니다.
