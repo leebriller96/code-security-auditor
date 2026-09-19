@@ -183,6 +183,9 @@ def run_pip_audit(target: Path):
                "--progress-spinner", "off"]
         rc, stdout = run(cmd, log)
         data = save_json_stdout(stdout, out) if stdout else None
+        if data is not None and "dependencies" not in data:
+            out.unlink(missing_ok=True)
+            data = None
         if data is None:
             record(tool, "실패", extra={"file": str(rel)},
                    reason=f"exit={rc}. {log.name} 확인 (버전이 == 로 고정되지 않은 의존성은 감사 불가 — "
@@ -214,6 +217,12 @@ def run_npm_audit(target: Path):
         data = save_json_stdout(stdout, out) if stdout else None
         if data is None:
             record(tool, "실패", extra={"file": str(rel)}, reason=f"exit={rc}. {log.name} 확인")
+            continue
+        # 레지스트리 오류(503 등)도 JSON 으로 오므로 결과 스키마를 확인한다.
+        if "vulnerabilities" not in data:
+            msg = str(data.get("message") or data.get("error") or "결과 스키마 불일치")[:120]
+            out.unlink(missing_ok=True)
+            record(tool, "실패", extra={"file": str(rel)}, reason=f"npm 레지스트리/감사 오류: {msg}")
             continue
         record(tool, "실행", output=out, findings=len(data.get("vulnerabilities", {})),
                extra={"file": str(rel)})

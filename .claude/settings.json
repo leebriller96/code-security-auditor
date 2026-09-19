@@ -29,8 +29,9 @@
       "Bash(bash input:*)",
       "Bash(sh input:*)",
       "Bash(cd input:*)",
-      "Bash(npm install:*)",
-      "Bash(npm ci:*)",
+      "Bash(npm install --prefix input:*)",
+      "Bash(npm ci --prefix input:*)",
+      "Bash(npm --prefix input:*)",
       "Bash(pip install -r input:*)",
       "Bash(python -m pip install -r input:*)",
       "Edit(input/**)"

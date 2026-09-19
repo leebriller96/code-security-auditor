@@ -118,7 +118,8 @@ code-security-auditor/
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
 ├── templates/auditignore.example     # .auditignore 형식 예시
-├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md) + 샘플 레포트
+├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱(Python) + 기대 발견 목록 + 샘플 레포트
+├── examples/vulnerable-express/      # 검증용 샘플 취약 앱(JavaScript) + 기대 발견 목록
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)
 └── CLAUDE.md                         # 프로젝트 규칙/컨텍스트
@@ -134,8 +135,13 @@ python tools/selftest.py
 
 ### 샘플 취약 앱 (방법론 검증)
 
-`examples/vulnerable-flask/` 는 의도적으로 취약하게 만든 소형 Flask 앱입니다. 방법론이나 스크립트를 수정한 뒤
-아래처럼 돌려 보고 `EXPECTED.md` 의 기대 발견 목록·합격 기준과 비교하면 회귀를 확인할 수 있습니다.
+`examples/` 에 의도적으로 취약하게 만든 소형 앱이 언어별로 있습니다. 방법론이나 스크립트를 수정한 뒤
+아래처럼 돌려 보고 각 디렉토리의 `EXPECTED.md`(기대 발견 목록·합격 기준)와 비교하면 회귀를 확인할 수 있습니다.
+
+| 샘플 | 언어/프레임워크 | 기대 항목 | 특징 |
+|------|----------------|-----------|------|
+| `examples/vulnerable-flask/` | Python / Flask | 10건 | Bandit·pip-audit 경로 검증. 실제 생성 레포트(`sample_report.md`) 포함 |
+| `examples/vulnerable-express/` | JavaScript / Express | 12건 | npm audit 경로 검증. JWT·CORS·Mass Assignment 등 로직/설정 취약점 비중 높음 |
 
 ```bash
 cp -r examples/vulnerable-flask input/     # PowerShell: Copy-Item -Recurse examples/vulnerable-flask input/
