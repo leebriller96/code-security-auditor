@@ -17,10 +17,12 @@
 # 왜 필요한가: Semgrep JSON 은 수 MB 가 되기도 하고 도구마다 필드명이 달라, 원본을 그대로 읽으면
 # 컨텍스트를 낭비하고 누락이 생긴다. 여기서 (도구, 룰, 심각도, 파일:라인, 메시지) 로 통일한다.
 #
-# 원칙: 비밀값 탐지 결과(gitleaks)의 실제 시크릿 문자열은 출력에 포함하지 않는다.
+# 원칙: 비밀값 탐지 결과의 실제 시크릿 문자열은 출력에 포함하지 않는다.
+#   gitleaks 는 Secret/Match 필드를 버리고, bandit B105 등 메시지에 인용된 값은 앞 4자만 남기고 마스킹한다.
 
 import fnmatch
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -53,9 +55,23 @@ def rel(path_str: str, target: Path) -> str:
         return path_str.replace("\\", "/")
 
 
+SECRET_RULE_HINT = re.compile(r"hardcoded|secret|password|credential|token|api[-_]?key", re.I)
+
+
+def mask_secrets(message: str) -> str:
+    # 비밀값 탐지 룰의 메시지에 인용된 값('...' 또는 "...")은 앞 4자만 남기고 마스킹한다.
+    def _mask(m):
+        q, val = m.group(1), m.group(2)
+        return f"{q}{val[:4]}****{q}" if len(val) > 4 else f"{q}****{q}"
+    return re.sub(r"""(['"])([^'"]{1,200})\1""", _mask, message)
+
+
 def row(tool, rule, severity, file, line, message, cwe="", confidence=""):
+    message = " ".join(str(message).split())
+    if SECRET_RULE_HINT.search(rule):
+        message = mask_secrets(message)
     return {"tool": tool, "rule": rule, "severity": severity, "file": file, "line": line,
-            "message": " ".join(str(message).split()), "cwe": cwe, "confidence": confidence}
+            "message": message, "cwe": cwe, "confidence": confidence}
 
 
 def cwe_str(value) -> str:
