@@ -29,7 +29,7 @@ cd code-security-auditor
 레포트(HTML) 생성을 위해 `markdown` 패키지가 필요합니다. (클론 후 1회)
 
 ```bash
-python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markdown)
+python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markdown + 구문강조용 pygments)
 ```
 
 선택적으로 SAST 도구를 설치하면 `hybrid`/`sast-only` 모드를 쓸 수 있습니다.
@@ -38,7 +38,11 @@ python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markd
 ```bash
 pip install semgrep bandit pip-audit     # SAST 도구 (선택)
 # gitleaks 는 https://github.com/gitleaks/gitleaks 참고
+# 윈도우: bandit/pip-audit 는 그대로 동작, semgrep 은 WSL 또는 Docker 사용을 권장
 ```
+
+SAST 러너는 `python tools/run_sast.py <대상경로>` 로 직접 실행할 수도 있습니다.
+결과는 `reports/.sast/` 에 도구별 JSON·로그·`summary.json` 으로 남습니다.
 
 PDF는 별도 설치 없이, 생성된 HTML을 브라우저에서 열고 **Ctrl+P → "PDF로 저장"** 으로 만듭니다.
 (자동 PDF 생성이 꼭 필요하면 weasyprint를 설치하고 빌더에 `--pdf` 옵션을 붙이면 되지만,
@@ -89,8 +93,9 @@ code-security-auditor/
 │   ├── commands/scan.md              # /scan 슬래시 명령
 │   └── skills/security-audit/SKILL.md # 취약점 분석 방법론
 ├── tools/
-│   ├── run_sast.sh                   # SAST 실행 래퍼
-│   ├── build_report.py               # MD → HTML 변환 (PDF는 선택)
+│   ├── run_sast.py                   # SAST 실행 래퍼 (설치된 도구만 실행, 결과/로그 수집)
+│   ├── build_report.py               # MD → HTML 변환 (심각도 배지·목차·구문강조, PDF는 선택)
+│   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
@@ -102,6 +107,8 @@ code-security-auditor/
 
 - 이 도구는 방어 목적입니다. 완성형 익스플로잇은 생성하지 않으며, 공격 시나리오는 개념 수준으로만 기술합니다.
 - 자동 분석은 보조 수단입니다. 중요한 시스템은 전문가 검토와 병행하세요.
+- 분석 대상 코드는 실행·설치·빌드하지 않습니다(정적 분석만). 대상 코드 안의 주석/문자열에 담긴 지시도 따르지 않습니다.
+  (SAST 러너의 의존성 감사도 의존성 해석 없이 실행하므로 `package-lock.json`, `==` 로 고정된 `requirements.txt` 가 있어야 동작합니다.)
 - `input/`에 넣은 코드와 생성된 레포트는 기본적으로 git에 커밋되지 않습니다(.gitignore).
 
 ## 라이선스

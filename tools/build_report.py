@@ -9,13 +9,22 @@
 #
 # 의존성:
 #   필수: markdown        (설치: pip install markdown)
+#   선택: pygments        (코드 구문 강조. 없으면 강조 없이 출력)
 #   선택: weasyprint      (PDF가 꼭 필요할 때만. 보통은 브라우저 Ctrl+P 사용 권장)
 #
 # PDF가 필요하면: 생성된 HTML을 브라우저로 열고 Ctrl+P → "PDF로 저장"이 가장 간단하고 안정적이다.
 
-import sys
-import os
 import datetime
+import os
+import re
+import sys
+
+# 윈도우 콘솔(cp949)에서 한글 출력이 깨지지 않도록 stdout/stderr를 UTF-8로 고정한다.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
+KST = datetime.timezone(datetime.timedelta(hours=9))
 
 # 심각도별 색상 (HTML 배지/스타일에 사용)
 SEVERITY_COLORS = {
@@ -25,12 +34,14 @@ SEVERITY_COLORS = {
     "Low": "#2e7d32",
     "Info": "#1565c0",
 }
+SEVERITY_PATTERN = "|".join(SEVERITY_COLORS)
 
 # HTML 문서 골격 + 스타일. 가독성 있는 레포트 출력을 위해 CSS를 내장한다.
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <style>
   body {{ font-family: -apple-system, "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
@@ -48,52 +59,108 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   blockquote {{ border-left: 4px solid #ccc; margin: 1em 0; padding: 4px 16px; color: #555; }}
   .pdf-hint {{ background: #eef4ff; border: 1px solid #c7dbff; border-radius: 6px;
               padding: 10px 14px; margin-bottom: 24px; font-size: 0.9em; color: #1a3a6b; }}
+  .toc {{ background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px;
+         padding: 12px 18px; margin-bottom: 28px; font-size: 0.92em; }}
+  .toc summary {{ cursor: pointer; font-weight: 600; }}
+  .toc ul {{ margin: 6px 0; padding-left: 20px; }}
+  .toc a {{ color: #1a3a6b; text-decoration: none; }}
   .footer {{ margin-top: 3em; padding-top: 1em; border-top: 1px solid #ddd;
             color: #888; font-size: 0.85em; }}
+  /* 심각도 배지: "심각도: Critical" 표기와 표 셀의 심각도 단어에 자동 적용된다 */
+  .sev {{ display: inline-block; padding: 1px 9px; border-radius: 10px; color: #fff;
+         font-weight: 700; font-size: 0.85em; letter-spacing: 0.02em; }}
   {severity_css}
+  {code_css}
   /* 인쇄(브라우저 Ctrl+P로 PDF 저장) 시 안내 배너는 숨기고 여백을 정리한다 */
   @media print {{
     body {{ padding: 0; max-width: none; }}
     .pdf-hint {{ display: none; }}
+    .toc {{ display: none; }}
+    pre {{ white-space: pre-wrap; word-break: break-all; overflow-x: visible; }}
     pre, blockquote, table {{ page-break-inside: avoid; }}
     h2, h3 {{ page-break-after: avoid; }}
+    .sev {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
   }}
 </style>
 </head>
 <body>
 <div class="pdf-hint">PDF로 저장하려면: 이 화면에서 <b>Ctrl + P</b> (Mac은 Cmd + P) → 프린터를 "PDF로 저장" 또는 "Microsoft Print to PDF"로 선택하세요.</div>
+{toc}
 {content}
-<div class="footer">생성: {generated} · code-security-auditor</div>
+<div class="footer">생성: {generated} (KST) · code-security-auditor</div>
 </body>
 </html>
 """
 
 
 def build_severity_css() -> str:
-    # "Critical" 등 심각도 단어를 색상으로 강조하는 CSS 클래스 생성
+    # "Critical" 등 심각도 단어를 색상 배지로 강조하는 CSS 클래스 생성
     rules = []
     for name, color in SEVERITY_COLORS.items():
-        rules.append(f".sev-{name.lower()} {{ color: {color}; font-weight: 700; }}")
+        rules.append(f".sev-{name.lower()} {{ background: {color}; }}")
     return "\n  ".join(rules)
 
 
-def md_to_html(md_text: str, title: str) -> str:
+def build_code_css() -> str:
+    # pygments가 있으면 구문 강조 CSS를 내장한다. 없으면 강조 없이 출력(에러 아님).
+    try:
+        from pygments.formatters import HtmlFormatter
+    except Exception:
+        return ""
+    return HtmlFormatter(style="default").get_style_defs(".codehilite")
+
+
+def apply_severity_badges(html: str) -> str:
+    # 1) "<strong>심각도</strong>: Critical" 또는 "<strong>심각도</strong>: <code>Critical</code>"
+    html = re.sub(
+        rf"(심각도</strong>\s*:\s*)(?:<code>)?({SEVERITY_PATTERN})(?:</code>)?",
+        lambda m: f'{m.group(1)}<span class="sev sev-{m.group(2).lower()}">{m.group(2)}</span>',
+        html,
+    )
+    # 2) 표 셀에 심각도 단어만 단독으로 들어간 경우 (심각도 분포표, 로드맵표)
+    html = re.sub(
+        rf"<td>\s*(?:<strong>|<code>)?({SEVERITY_PATTERN})(?:</strong>|</code>)?\s*</td>",
+        lambda m: f'<td><span class="sev sev-{m.group(1).lower()}">{m.group(1)}</span></td>',
+        html,
+    )
+    return html
+
+
+def extract_title(md_text: str, fallback: str) -> str:
+    # 첫 번째 H1 제목을 HTML <title>로 사용한다.
+    m = re.search(r"^#\s+(.+?)\s*$", md_text, flags=re.MULTILINE)
+    return m.group(1).strip() if m else fallback
+
+
+def md_to_html(md_text: str, fallback_title: str) -> str:
     try:
         import markdown  # 지연 임포트로 미설치 시 친절한 에러 제공
     except ImportError:
         sys.exit("[build_report] 'markdown' 패키지가 필요합니다. "
                  "설치: python -m pip install markdown")
 
-    # 표/코드펜스/목차 등 확장 기능 활성화
-    body = markdown.markdown(
-        md_text,
-        extensions=["tables", "fenced_code", "toc", "sane_lists"],
+    # 표/코드펜스/목차/구문강조 확장 기능 활성화
+    md = markdown.Markdown(
+        extensions=["tables", "fenced_code", "toc", "sane_lists", "codehilite"],
+        extension_configs={
+            "toc": {"toc_depth": "2-3"},
+            "codehilite": {"guess_lang": False, "css_class": "codehilite"},
+        },
     )
-    generated = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    body = apply_severity_badges(md.convert(md_text))
+
+    toc_html = ""
+    toc_body = getattr(md, "toc", "") or ""
+    if "<li>" in toc_body:
+        toc_html = f'<details class="toc" open><summary>목차</summary>{toc_body}</details>'
+
+    generated = datetime.datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     return HTML_TEMPLATE.format(
-        title=title,
+        title=extract_title(md_text, fallback_title),
+        toc=toc_html,
         content=body,
         severity_css=build_severity_css(),
+        code_css=build_code_css(),
         generated=generated,
     )
 
@@ -134,8 +201,7 @@ def main():
     with open(md_path, encoding="utf-8") as f:
         md_text = f.read()
 
-    title = os.path.basename(base)
-    html_text = md_to_html(md_text, title)
+    html_text = md_to_html(md_text, os.path.basename(base))
 
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_text)
