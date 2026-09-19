@@ -45,3 +45,12 @@ cp -r examples/vulnerable-flask input/     # 윈도우 PowerShell: Copy-Item -Re
 - "반드시" 10건 중 **9건 이상** 탐지, 그중 IDOR(#6)은 필수.
 - 심각도가 기대치와 한 단계 이상 차이 나는 항목이 2건 이하.
 - 방법론 준수 항목 4개 모두 충족.
+
+## 검증 기록
+
+| 일자(KST) | 모드 / 도구 | 결과 | 비고 |
+|-----------|-------------|------|------|
+| 2026-09-20 | hybrid / Bandit + pip-audit + Claude | **합격** — 필수 10/10, 심각도 불일치 1건(#8 MD5 → High), 방법론 4/4 | Bandit 단독으로는 #4 SSTI, #5 Path Traversal, #6 IDOR, #9 Open Redirect, `config.py:4` AWS Key ID 를 못 잡음 → Claude 분석이 보완. 결과물: `sample_report.md` |
+
+`sample_report.md` 는 이 검증에서 실제로 생성된 레포트입니다. 레포트 형식·서술 수준의 참고 예시로 쓰세요.
+(`python tools/build_report.py examples/vulnerable-flask/sample_report.md` 로 HTML 을 만들어 볼 수 있습니다.)

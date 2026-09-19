@@ -110,7 +110,7 @@ code-security-auditor/
 ├── templates/report_template.md      # 레포트 템플릿
 ├── templates/auditignore.example     # .auditignore 형식 예시
 ├── .claude/settings.json             # 도구 스크립트 사전 허용 / 대상 코드 실행·수정 차단
-├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md)
+├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md) + 샘플 레포트
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)
 └── CLAUDE.md                         # 프로젝트 규칙/컨텍스트
