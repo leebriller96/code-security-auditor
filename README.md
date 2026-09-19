@@ -59,7 +59,15 @@ PDF는 별도 설치 없이, 생성된 HTML을 브라우저에서 열고 **Ctrl+
 /scan claude-only     # SAST 없이 Claude 분석만
 /scan sast-only       # SAST 결과만 빠르게
 /scan hybrid          # (기본) 둘 다 결합
+
+# 대상·범위를 좁히려면 (순서 무관, 조합 가능):
+/scan input/shop/src/auth              # 특정 경로만
+/scan input/api --diff                 # git 변경 파일만 (PR 리뷰용)
+/scan claude-only --only auth,injection  # 인증/인가 + 인젝션 분류만
 ```
+
+이미 검토해 제외한 항목이 재스캔 때 반복 보고되지 않게 하려면 `.auditignore` 를 씁니다
+(형식: `templates/auditignore.example`, 위치: 대상 디렉토리 또는 repo 루트).
 
 코드를 채팅에 직접 붙여넣고 `/scan` 해도 됩니다.
 
@@ -100,6 +108,8 @@ code-security-auditor/
 │   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)
 │   └── requirements.txt
 ├── templates/report_template.md      # 레포트 템플릿
+├── templates/auditignore.example     # .auditignore 형식 예시
+├── .claude/settings.json             # 도구 스크립트 사전 허용 / 대상 코드 실행·수정 차단
 ├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱 + 기대 발견 목록(EXPECTED.md)
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)

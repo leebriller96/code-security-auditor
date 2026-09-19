@@ -5,16 +5,21 @@
 #   python tools/summarize_sast.py                 # reports/.sast/ 를 읽어 Markdown 표를 stdout 에 출력
 #   python tools/summarize_sast.py --full          # 메시지를 자르지 않고 전부 출력
 #   python tools/summarize_sast.py --max 80        # 상위 N건만 출력 (심각도 순)
+#   python tools/summarize_sast.py --show-suppressed  # .auditignore 로 억제된 항목도 표에 표시
 #
 # 출력:
 #   stdout                         도구별/심각도별 집계 + 항목 표 (Claude 가 읽기 위한 형식)
-#   reports/.sast/normalized.json  정규화된 전체 항목 (도구, 룰, 심각도, 파일, 라인, 메시지, CWE)
+#   reports/.sast/normalized.json  정규화된 전체 항목 (도구, 룰, 심각도, 파일, 라인, 메시지, CWE, 억제 사유)
+#
+# .auditignore: 이미 검토해 제외한 항목이 재스캔 때 반복 보고되지 않도록 억제한다.
+#   <대상경로>/.auditignore 와 repo 루트 .auditignore 를 모두 읽는다. 형식은 templates/auditignore.example 참고.
 #
 # 왜 필요한가: Semgrep JSON 은 수 MB 가 되기도 하고 도구마다 필드명이 달라, 원본을 그대로 읽으면
 # 컨텍스트를 낭비하고 누락이 생긴다. 여기서 (도구, 룰, 심각도, 파일:라인, 메시지) 로 통일한다.
 #
 # 원칙: 비밀값 탐지 결과(gitleaks)의 실제 시크릿 문자열은 출력에 포함하지 않는다.
 
+import fnmatch
 import json
 import sys
 from pathlib import Path
@@ -157,6 +162,43 @@ def parse_npm_audit(data, target, source_file):
     return rows
 
 
+# ---------------------------------------------------------------- .auditignore
+
+def load_auditignore(target: Path):
+    """억제 규칙 목록을 돌려준다: (파일 glob, 라인 또는 None, 룰/CWE/*, 사유, 출처파일)"""
+    rules = []
+    for path in (target / ".auditignore", REPO_ROOT / ".auditignore"):
+        if not path.is_file():
+            continue
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line, _, comment = raw.partition("#")
+            parts = line.split()
+            if not parts:
+                continue
+            loc = parts[0]
+            rule = parts[1] if len(parts) > 1 else "*"
+            file_glob, _, line_no = loc.partition(":")
+            rules.append((file_glob, int(line_no) if line_no.isdigit() else None,
+                          rule, comment.strip(), path.name))
+    return rules
+
+
+def suppression_reason(row, rules):
+    for file_glob, line_no, rule, reason, src in rules:
+        if not fnmatch.fnmatch(row["file"], file_glob):
+            continue
+        if line_no is not None and row["line"] != line_no:
+            continue
+        if rule != "*":
+            r = rule.upper()
+            matched = (row["rule"].upper().startswith(r)
+                       or (r.startswith("CWE-") and r in row["cwe"].upper()))
+            if not matched:
+                continue
+        return f"{reason or '사유 미기재'} ({src})"
+    return ""
+
+
 # ---------------------------------------------------------------- 메인
 
 def collect():
@@ -183,6 +225,9 @@ def collect():
             rows += parse_pip_audit(data, target, r.get("file", "requirements.txt"))
         elif tool == "npm-audit":
             rows += parse_npm_audit(data, target, r.get("file", "package.json"))
+    rules = load_auditignore(target)
+    for x in rows:
+        x["suppressed"] = suppression_reason(x, rules) if rules else ""
     rows.sort(key=lambda x: (SEVERITY_ORDER.get(x["severity"], 9), x["file"], x["line"] or 0, x["tool"]))
     return summary, rows
 
@@ -194,12 +239,13 @@ def md_escape(s: str) -> str:
 def main():
     args = sys.argv[1:]
     full = "--full" in args
+    show_suppressed = "--show-suppressed" in args
     max_rows = None
     if "--max" in args:
         try:
             max_rows = int(args[args.index("--max") + 1])
         except (IndexError, ValueError):
-            sys.exit("사용법: python tools/summarize_sast.py [--full] [--max N]")
+            sys.exit("사용법: python tools/summarize_sast.py [--full] [--max N] [--show-suppressed]")
 
     summary, rows = collect()
     (SAST_DIR / "normalized.json").write_text(
@@ -215,23 +261,33 @@ def main():
         reason = f" · {r['reason']}" if r["reason"] else ""
         print(f"- {r['tool']}{f}: {r['status']}{n}{reason}")
 
+    suppressed = [x for x in rows if x["suppressed"]]
+    active = [x for x in rows if not x["suppressed"]]
     by_sev = {}
-    for x in rows:
+    for x in active:
         by_sev[x["severity"]] = by_sev.get(x["severity"], 0) + 1
     print("\n**심각도 분포(도구 보고 기준, 트리아지 전)**: "
           + ", ".join(f"{k} {by_sev[k]}" for k in sorted(by_sev, key=lambda s: SEVERITY_ORDER.get(s, 9))))
+    if suppressed:
+        print(f"**.auditignore 로 억제**: {len(suppressed)}건"
+              + ("" if show_suppressed else " (표시하려면 --show-suppressed)"))
 
-    shown = rows[:max_rows] if max_rows else rows
+    listed = rows if show_suppressed else active
+    shown = listed[:max_rows] if max_rows else listed
     print("\n| # | 심각도 | 도구 | 룰 | 위치 | CWE | 확신도 | 메시지 |")
     print("|---|--------|------|-----|------|-----|--------|--------|")
     for i, x in enumerate(shown, 1):
         loc = f"{x['file']}:{x['line']}" if x["line"] else x["file"]
         msg = x["message"] if full or len(x["message"]) <= MSG_LIMIT else x["message"][:MSG_LIMIT] + "…"
+        if x["suppressed"]:
+            msg = f"[억제: {x['suppressed']}] {msg}"
         print(f"| {i} | {x['severity']} | {x['tool']} | {md_escape(x['rule'])} | `{loc}` | "
               f"{x['cwe']} | {x['confidence']} | {md_escape(msg)} |")
-    if max_rows and len(rows) > max_rows:
-        print(f"\n… 외 {len(rows) - max_rows}건 (전체: reports/.sast/normalized.json)")
+    if max_rows and len(listed) > max_rows:
+        print(f"\n… 외 {len(listed) - max_rows}건 (전체: reports/.sast/normalized.json)")
     print("\n> 위 심각도는 도구가 보고한 값입니다. 각 항목을 코드로 검증한 뒤 CLAUDE.md 기준으로 다시 산정하세요.")
+    if suppressed:
+        print("> 억제된 항목은 레포트 \"검토 제외\" 섹션에 `.auditignore` 사유와 함께 기록하세요.")
 
 
 if __name__ == "__main__":
