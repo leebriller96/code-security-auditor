@@ -65,6 +65,12 @@ def main():
             check("목차 생성", '<details class="toc"' in h)
             check("코드 블록 렌더링", 'class="codehilite"' in h)
             check("시크릿 원문 없음", "AKIAIOSFODNN7EXAMPLE" not in h and "wJalrXUtnFEMI" not in h)
+            import re as _re
+            blocks = _re.findall(r'<details class="finding" data-sev="(\w+)".*?</details>', h, _re.S)
+            check("발견 항목 13개가 접이식으로 래핑", len(blocks) == 13, str(len(blocks)))
+            check("필터 바 1개", h.count('id="filterbar"') == 1)
+            check("항목 래핑이 h2 섹션을 삼키지 않음",
+                  all("<h2" not in b for b in _re.findall(r'<details class="finding".*?</details>', h, _re.S)))
 
         print("3) export_findings.py")
         rc, out = run(TOOLS / "export_findings.py", md, "--sarif")

@@ -110,7 +110,7 @@ code-security-auditor/
 ├── tools/
 │   ├── run_sast.py                   # SAST 실행 래퍼 (설치된 도구만 실행, 결과/로그 수집)
 │   ├── summarize_sast.py             # 도구별 JSON → 하나의 정규화 표 (Claude 가 읽는 입력)
-│   ├── build_report.py               # MD → HTML 변환 (심각도 배지·목차·구문강조, PDF는 선택)
+│   ├── build_report.py               # MD → HTML 변환 (심각도 배지·필터·접이식 항목·목차·구문강조, PDF는 선택)
 │   ├── export_findings.py            # 레포트 MD → findings.json / SARIF
 │   ├── report_diff.py                # 두 레포트 비교 (신규/잔존/해결)
 │   ├── kst_now.py                    # KST 타임스탬프 (OS 무관)

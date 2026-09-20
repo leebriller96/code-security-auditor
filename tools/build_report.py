@@ -69,13 +69,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   /* 심각도 배지: "심각도: Critical" 표기와 표 셀의 심각도 단어에 자동 적용된다 */
   .sev {{ display: inline-block; padding: 1px 9px; border-radius: 10px; color: #fff;
          font-weight: 700; font-size: 0.85em; letter-spacing: 0.02em; }}
+  /* 발견 항목 접기/펼치기 + 심각도 필터 바 */
+  .finding {{ border: 1px solid #e3e3e3; border-left-width: 5px; border-radius: 6px; margin: 14px 0; }}
+  .finding > summary {{ cursor: pointer; padding: 10px 14px; font-weight: 600; list-style: none;
+                       display: flex; gap: 10px; align-items: center; }}
+  .finding > summary::-webkit-details-marker {{ display: none; }}
+  .finding > summary::before {{ content: "\25B8"; color: #888; font-size: 0.9em; }}
+  .finding[open] > summary::before {{ content: "\25BE"; }}
+  .finding > summary .fid {{ color: #666; font-family: monospace; font-size: 0.9em; }}
+  .finding > .body {{ padding: 4px 18px 12px; border-top: 1px solid #eee; }}
+  .finding > .body h3 {{ display: none; }}
+  .finding.hidden {{ display: none; }}
+  .filterbar {{ position: sticky; top: 0; z-index: 5; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+               padding: 8px 12px; margin: 0 0 18px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.9em; }}
+  .filterbar label {{ display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }}
+  .filterbar button {{ border: 1px solid #ccc; background: #f7f7f7; border-radius: 4px; padding: 2px 10px; cursor: pointer; }}
+  .filterbar .cnt {{ color: #666; margin-left: auto; }}
   {severity_css}
   {code_css}
   /* 인쇄(브라우저 Ctrl+P로 PDF 저장) 시 안내 배너는 숨기고 여백을 정리한다 */
   @media print {{
     body {{ padding: 0; max-width: none; }}
     .pdf-hint {{ display: none; }}
-    .toc {{ display: none; }}
+    .toc, .filterbar {{ display: none; }}
+    .finding {{ border: none; margin: 0; }}
+    .finding > summary {{ display: none; }}
+    .finding > .body {{ display: block !important; padding: 0; border: none; }}
+    .finding > .body h3 {{ display: block; }}
+    .finding.hidden {{ display: block; }}
     pre {{ white-space: pre-wrap; word-break: break-all; overflow-x: visible; }}
     pre, blockquote, table {{ page-break-inside: avoid; }}
     h2, h3 {{ page-break-after: avoid; }}
@@ -88,6 +109,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 {toc}
 {content}
 <div class="footer">생성: {generated} (KST) · code-security-auditor</div>
+<script>
+(function () {{
+  var findings = document.querySelectorAll("details.finding");
+  var bar = document.getElementById("filterbar");
+  if (!findings.length || !bar) return;
+  var cnt = document.getElementById("filter-count");
+  function apply() {{
+    var on = {{}};
+    bar.querySelectorAll("input[type=checkbox]").forEach(function (c) {{ on[c.value] = c.checked; }});
+    var shown = 0;
+    findings.forEach(function (f) {{ var v = on[f.dataset.sev] !== false; f.classList.toggle("hidden", !v); if (v) shown++; }});
+    cnt.textContent = shown + " / " + findings.length + "건 표시";
+  }}
+  bar.addEventListener("change", apply);
+  document.getElementById("expand-all").onclick = function () {{ findings.forEach(function (f) {{ f.open = true; }}); }};
+  document.getElementById("collapse-all").onclick = function () {{ findings.forEach(function (f) {{ f.open = false; }}); }};
+  window.addEventListener("beforeprint", function () {{ findings.forEach(function (f) {{ f.open = true; }}); }});
+  function openHash() {{
+    if (!location.hash) return;
+    var el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    var d = el && el.closest("details.finding");
+    if (d) d.open = true;
+  }}
+  window.addEventListener("hashchange", openHash); openHash();
+  apply();
+}})();
+</script>
 </body>
 </html>
 """
@@ -98,6 +146,7 @@ def build_severity_css() -> str:
     rules = []
     for name, color in SEVERITY_COLORS.items():
         rules.append(f".sev-{name.lower()} {{ background: {color}; }}")
+        rules.append(f".finding[data-sev={name}] {{ border-left-color: {color}; }}")
     return "\n  ".join(rules)
 
 
@@ -126,6 +175,49 @@ def apply_severity_badges(html: str) -> str:
     return html
 
 
+FINDING_H3 = re.compile(r'<h3 id="([^"]*)">\[(F-\d+)\]\s*(.*?)</h3>', re.S)
+BLOCK_END = re.compile(r"<h[23]\b|<hr\s*/?>")
+
+
+def wrap_findings(html: str) -> str:
+    """'### [F-001] 제목' 블록을 접이식 <details class="finding"> 으로 감싸고, 앞에 심각도 필터 바를 넣는다.
+    항목 범위는 다음 <h2>/<h3>/<hr> 직전까지. 심각도는 항목 안의 첫 배지에서 읽는다."""
+    heads = list(FINDING_H3.finditer(html))
+    if not heads:
+        return html
+    out, pos, counts = [], 0, {}
+    for h in heads:
+        out.append(html[pos:h.start()])
+        nxt = BLOCK_END.search(html, h.end())
+        end = nxt.start() if nxt else len(html)
+        block = html[h.start():end]
+        sev_m = re.search(r'class="sev sev-[a-z]+">([A-Za-z]+)<', block)
+        sev = sev_m.group(1) if sev_m else "Info"
+        counts[sev] = counts.get(sev, 0) + 1
+        title = re.sub(r"<[^>]+>", "", h.group(3))
+        out.append(
+            f'<details class="finding" data-sev="{sev}" open>'
+            f'<summary><span class="sev sev-{sev.lower()}">{sev}</span>'
+            f'<span class="fid">{h.group(2)}</span><span>{title}</span></summary>'
+            f'<div class="body">{block}</div></details>'
+        )
+        pos = end
+    out.append(html[pos:])
+    html = "".join(out)
+
+    boxes = "".join(
+        f'<label><input type="checkbox" value="{s}" checked>'
+        f'<span class="sev sev-{s.lower()}">{s}</span> {counts[s]}</label>'
+        for s in SEVERITY_COLORS if counts.get(s)
+    )
+    bar = (f'<div class="filterbar" id="filterbar"><b>필터</b> {boxes}'
+           f'<button type="button" id="expand-all">모두 펼치기</button>'
+           f'<button type="button" id="collapse-all">모두 접기</button>'
+           f'<span class="cnt" id="filter-count"></span></div>')
+    first = html.find('<details class="finding"')
+    return html[:first] + bar + html[first:]
+
+
 def extract_title(md_text: str, fallback: str) -> str:
     # 첫 번째 H1 제목을 HTML <title>로 사용한다.
     m = re.search(r"^#\s+(.+?)\s*$", md_text, flags=re.MULTILINE)
@@ -147,7 +239,7 @@ def md_to_html(md_text: str, fallback_title: str) -> str:
             "codehilite": {"guess_lang": False, "css_class": "codehilite"},
         },
     )
-    body = apply_severity_badges(md.convert(md_text))
+    body = wrap_findings(apply_severity_badges(md.convert(md_text)))
 
     toc_html = ""
     toc_body = getattr(md, "toc", "") or ""
