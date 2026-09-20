@@ -114,14 +114,23 @@ def main():
             {"RuleID": "aws-access-token", "Description": "AWS Access Token", "File": str(target / "config.py"),
              "StartLine": 4, "Secret": "AKIA_SHOULD_NOT_APPEAR", "Match": "AKIA_SHOULD_NOT_APPEAR"}
         ]), encoding="utf-8")
+        (SAST_DIR / "osv-scanner.json").write_text(json.dumps({"results": [{"packages": [
+            {"package": {"name": "org.apache.logging.log4j:log4j-core", "version": "2.14.1"}, "vulnerabilities": [
+                {"id": "GHSA-jfh8-c2jp-5v3q", "aliases": ["CVE-2021-44228"], "summary": "Log4Shell",
+                 "database_specific": {"severity": "CRITICAL", "cwe_ids": ["CWE-917"]},
+                 "affected": [{"ranges": [{"events": [{"introduced": "2.0"}, {"fixed": "2.15.0"}]}]}]},
+                {"id": "PYSEC-DUP", "aliases": ["CVE-2021-44228"], "summary": "dup", "database_specific": {}, "affected": []},
+            ]}]}]}), encoding="utf-8")
         (SAST_DIR / "summary.json").write_text(json.dumps({"target": str(target), "results": [
             {"tool": "bandit", "status": "실행", "reason": "", "output": "reports/.sast/bandit.json", "findings": 2},
             {"tool": "gitleaks", "status": "실행", "reason": "", "output": "reports/.sast/gitleaks.json", "findings": 1},
+            {"tool": "osv-scanner", "status": "실행", "reason": "", "output": "reports/.sast/osv-scanner.json", "findings": 2, "file": "pom.xml"},
             {"tool": "semgrep", "status": "미설치", "reason": "x", "output": None, "findings": None},
         ]}, ensure_ascii=False), encoding="utf-8")
         rc, out = run(TOOLS / "summarize_sast.py", "--show-suppressed")
         check("정규화 실행", rc == 0, out)
-        check("총 3건", "총 3건" in out)
+        check("총 4건 (osv 중복 병합)", "총 4건" in out)
+        check("osv Log4Shell Critical", "| Critical | osv-scanner | GHSA-jfh8-c2jp-5v3q (CVE-2021-44228) | `pom.xml` | CWE-917" in out)
         check("B105 값 마스킹", "'supe****'" in out and "super-secret-value" not in out)
         check("gitleaks 시크릿 제거", "AKIA_SHOULD_NOT_APPEAR" not in out)
         check(".auditignore 억제", "억제**: 1건" in out and "[억제: 테스트 억제" in out)

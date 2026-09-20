@@ -9,7 +9,7 @@
 
 - `input/`에 코드를 넣거나 코드를 붙여넣고 `/scan` 한 번이면 끝
 - OWASP Top 10:2025 / CWE Top 25 기반의 체계적 점검
-- 정적분석 도구(Semgrep, Bandit 등) + Claude 심층 분석 결합 (모드 선택 가능)
+- 정적분석 도구(Semgrep, Bandit, Gitleaks, pip-audit/npm audit/osv-scanner) + Claude 심층 분석 결합 (모드 선택 가능)
 - 발견 항목마다 위치·심각도·공격 시나리오(개념)·수정 코드(Before/After) 제공
 - 레포트를 Markdown + HTML로 export (PDF는 HTML에서 브라우저 인쇄로 저장)
 
@@ -38,6 +38,7 @@ python -m pip install -r tools/requirements.txt   # HTML 레포트 빌더 (markd
 ```bash
 pip install semgrep bandit pip-audit     # SAST 도구 (선택) — 윈도우 포함 네이티브 동작 확인 (semgrep 1.177)
 # gitleaks: https://github.com/gitleaks/gitleaks/releases 에서 OS 별 zip 을 받아 PATH 에 추가 (8.30 확인)
+# osv-scanner (Java/Kotlin 의존성): https://github.com/google/osv-scanner/releases 단일 실행파일을 PATH 에 추가 (2.6 확인)
 ```
 
 SAST 러너는 `python tools/run_sast.py <대상경로>` 로 직접 실행할 수도 있습니다.
@@ -142,7 +143,7 @@ python tools/selftest.py
 |------|----------------|-----------|------|
 | `examples/vulnerable-flask/` | Python / Flask | 10건 | Bandit·pip-audit 경로 검증 |
 | `examples/vulnerable-express/` | JavaScript / Express | 12건 | npm audit 경로 검증. JWT·CORS·Mass Assignment 등 로직/설정 취약점 비중 높음 |
-| `examples/vulnerable-spring/` | Java / Spring Boot | 12건 | Semgrep Java 룰셋 검증. XXE·역직렬화·SSRF 포함. `pom.xml` 의존성(Log4Shell 등)은 도구 없이 Claude 가 판단 |
+| `examples/vulnerable-spring/` | Java / Spring Boot | 12건 | Semgrep Java 룰셋·osv-scanner(pom.xml) 검증. XXE·역직렬화·SSRF·Log4Shell 포함 |
 
 ```bash
 cp -r examples/vulnerable-flask input/     # PowerShell: Copy-Item -Recurse examples/vulnerable-flask input/
