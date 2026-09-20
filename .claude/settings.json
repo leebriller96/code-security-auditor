@@ -18,6 +18,8 @@
       "Bash(python -m pip install -r tools/requirements.txt)",
       "Bash(python3 -m pip install -r tools/requirements.txt)",
       "Bash(git -C input:*)",
+      "Bash(OSV_RESOLVE=1 python tools/run_sast.py:*)",
+      "Bash(SEMGREP_CONFIGS=* python tools/run_sast.py:*)",
       "Bash(find input:*)",
       "Bash(wc:*)",
       "Bash(ls:*)"

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# summarize_sast.py — run_sast.py 가 모은 도구별 JSON(스키마가 제각각)을 하나의 컴팩트한 표로 정규화한다.
+# summarize_sast.py — run_sast.py 가 모은 도구별 JSON(semgrep/bandit/gitleaks/pip-audit/npm-audit/osv-scanner,
+# 스키마가 제각각)을 하나의 컴팩트한 표로 정규화한다.
 #
 # 사용법:
 #   python tools/summarize_sast.py                 # reports/.sast/ 를 읽어 Markdown 표를 stdout 에 출력
@@ -178,6 +179,36 @@ def parse_npm_audit(data, target, source_file):
     return rows
 
 
+def parse_osv(data, target, source_file):
+    sev_map = {"CRITICAL": "Critical", "HIGH": "High", "MODERATE": "Medium", "MEDIUM": "Medium", "LOW": "Low"}
+    rows = []
+    for r in data.get("results", []):
+        for pk in r.get("packages", []):
+            name, ver = pk["package"].get("name", ""), pk["package"].get("version", "")
+            seen = set()
+            for v in pk.get("vulnerabilities", []):
+                ids = [v.get("id", "")] + list(v.get("aliases", []))
+                key = next((i for i in ids if i.startswith("CVE-")), ids[0])
+                if key in seen:
+                    continue
+                seen.add(key)
+                sev = sev_map.get(str((v.get("database_specific") or {}).get("severity", "")).upper(), "미정")
+                fixed = sorted({e["fixed"] for a in v.get("affected", []) for rg in a.get("ranges", [])
+                                for e in rg.get("events", []) if "fixed" in e})
+                # 여러 메이저 브랜치의 수정 버전이 섞여 오므로 현재 버전과 같은 메이저를 우선 보여준다.
+                major = ver.split(".")[0]
+                same = [f for f in fixed if f.split(".")[0] == major]
+                fixed = same or fixed
+                cwes = cwe_str((v.get("database_specific") or {}).get("cwe_ids") or [])
+                ident = v.get("id", "")
+                if key != ident:
+                    ident = f"{ident} ({key})"
+                rows.append(row("osv-scanner", ident, sev, source_file, None,
+                                f"{name}@{ver} · 수정 버전: {', '.join(fixed) or '없음'} · {v.get('summary', '')}",
+                                cwes or "CWE-1395"))
+    return rows
+
+
 # ---------------------------------------------------------------- .auditignore
 
 def load_auditignore(target: Path):
@@ -241,6 +272,8 @@ def collect():
             rows += parse_pip_audit(data, target, r.get("file", "requirements.txt"))
         elif tool == "npm-audit":
             rows += parse_npm_audit(data, target, r.get("file", "package.json"))
+        elif tool == "osv-scanner":
+            rows += parse_osv(data, target, r.get("file", "pom.xml"))
     rules = load_auditignore(target)
     for x in rows:
         x["suppressed"] = suppression_reason(x, rules) if rules else ""

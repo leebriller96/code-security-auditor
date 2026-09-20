@@ -17,6 +17,7 @@
 #     (pip-audit 는 --no-deps --disable-pip 로 의존성 해석을 끈다. npm audit 는 lifecycle 스크립트를 실행하지 않는다.)
 #   - 매 실행 전 출력 디렉토리를 비워 이전 스캔 결과가 섞이지 않게 한다.
 #   - 도구가 실패해도 조용히 넘어가지 않고 상태/사유를 남긴다.
+#   - Java/Kotlin 의존성은 osv-scanner 로 감사한다 (pom.xml 등). pip-audit/npm 이 없을 때의 대체 수단이기도 하다.
 
 import json
 import os
@@ -114,19 +115,30 @@ def run_semgrep(target: Path):
         return record(tool, "미설치", reason="설치: pip install semgrep (윈도우 네이티브 동작 확인: 1.177)")
     print(f"[run_sast] Semgrep 실행 중... (룰셋을 네트워크에서 받으므로 시간이 걸릴 수 있음)")
     out, log = OUT_DIR / "semgrep.json", OUT_DIR / "semgrep.log"
-    cmd = ["semgrep", "--config", "p/security-audit", "--config", "p/owasp-top-ten",
-           "--json", "--quiet"]
+    # 기본 룰셋 3종. 세 샘플 앱 벤치(2026-09): p/secrets·p/jwt·p/cwe-top-25·p/xss 등은 추가 탐지 0건이라 제외,
+    # p/default 는 CSRF 미들웨어·eval 등 +5건. 바꾸려면 SEMGREP_CONFIGS="p/a,p/b" (쉼표 구분).
+    configs = [c.strip() for c in os.environ.get("SEMGREP_CONFIGS", "p/security-audit,p/owasp-top-ten,p/default").split(",") if c.strip()]
+    cmd = ["semgrep", "--json", "--quiet", "--metrics=off"]
+    for c in configs:
+        cmd += ["--config", c]
     for d in EXCLUDE_DIRS:
         cmd += ["--exclude", d]
     cmd.append(str(target))
     rc, stdout = run(cmd, log)
     data = save_json_stdout(stdout, out) if stdout else None
     if data is None:
-        return record(tool, "실패", reason=f"JSON 결과 없음 (exit={rc}). {log.name} 확인 (네트워크/룰셋 오류 가능)")
+        hint = "존재하지 않는 룰셋 이름 또는 네트워크 오류 가능"
+        return record(tool, "실패", reason=f"JSON 결과 없음 (exit={rc}). {log.name} 확인 ({hint})")
     n = len(data.get("results", []))
-    errs = len(data.get("errors", []))
-    return record(tool, "실행", output=out, findings=n,
-                  reason=f"내부 오류 {errs}건 (파싱 실패 파일 등)" if errs else "")
+    errs = data.get("errors", [])
+    # 룰셋 로딩 실패는 결과가 0건으로 조용히 끝나므로 오류 목록에서 골라내 명시한다.
+    cfg_errs = [e for e in errs if "configuration" in str(e.get("message", "")).lower()
+                or "config" in str(e.get("type", "")).lower()]
+    if cfg_errs:
+        msg = str(cfg_errs[0].get("message") or cfg_errs[0].get("long_msg") or cfg_errs[0])[:150]
+        return record(tool, "실패", reason=f"룰셋 오류: {msg}")
+    return record(tool, "실행", output=out, findings=n, extra={"configs": configs},
+                  reason=f"내부 오류 {len(errs)}건 (파싱 실패 파일 등)" if errs else "")
 
 
 def run_bandit(target: Path):
@@ -228,6 +240,47 @@ def run_npm_audit(target: Path):
                extra={"file": str(rel)})
 
 
+def run_osv_scanner(target: Path):
+    """Java/Kotlin 매니페스트 + (pip-audit/npm 미실행 시) Python/JS 락파일을 OSV 로 감사한다."""
+    tool = "osv-scanner"
+    java_files = []
+    for pat in ("pom.xml", "build.gradle.lockfile", "gradle.lockfile", "gradle/verification-metadata.xml"):
+        java_files += find_files(target, pat)
+    # pip-audit / npm audit 가 "실행" 되지 못한 매니페스트는 osv-scanner 로 대체한다.
+    ran_tools = {r["tool"] for r in results if r["status"] == "실행"}
+    fallback = []
+    if "pip-audit" not in ran_tools:
+        fallback += find_files(target, "requirements*.txt") + find_files(target, "poetry.lock") + find_files(target, "Pipfile.lock")
+    if "npm-audit" not in ran_tools:
+        fallback += find_files(target, "package-lock.json") + find_files(target, "yarn.lock") + find_files(target, "pnpm-lock.yaml")
+    files = java_files + fallback
+    if not files:
+        return record(tool, "건너뜀", reason="Java 매니페스트(pom.xml 등) 없음, 다른 언어는 전용 도구가 처리")
+    if not have("osv-scanner"):
+        return record(tool, "미설치", reason="설치: https://github.com/google/osv-scanner/releases (단일 실행파일, PATH 에 추가)")
+    # 전이 의존성 해석은 매니페스트에 적힌 저장소로 네트워크 요청을 보내므로 기본은 끈다 (--no-resolve).
+    # 신뢰할 수 있는 대상이면 OSV_RESOLVE=1 로 켤 수 있다.
+    resolve = os.environ.get("OSV_RESOLVE") == "1"
+    for i, f in enumerate(files):
+        rel = f.relative_to(target)
+        print(f"[run_sast] osv-scanner(의존성) 실행 중... {rel}" + (" (전이 해석 켜짐)" if resolve else ""))
+        suffix = "" if i == 0 else f"_{i}"
+        out, log = OUT_DIR / f"osv-scanner{suffix}.json", OUT_DIR / f"osv-scanner{suffix}.log"
+        cmd = ["osv-scanner", "scan", "source", "--format", "json", "--allow-no-lockfiles"]
+        if not resolve:
+            cmd.append("--no-resolve")
+        cmd += ["-L", str(f)]
+        rc, stdout = run(cmd, log)
+        data = save_json_stdout(stdout, out) if stdout else None
+        # 종료 코드: 0 = 취약점 없음, 1 = 취약점 있음, 그 외 = 오류
+        if data is None or rc not in (0, 1):
+            record(tool, "실패", extra={"file": rel.as_posix()}, reason=f"exit={rc}. {log.name} 확인")
+            continue
+        n = sum(len(pk.get("vulnerabilities", [])) for r in data.get("results", []) for pk in r.get("packages", []))
+        record(tool, "실행", output=out, findings=n, extra={"file": rel.as_posix()},
+               reason="" if resolve else "직접 의존성만 (전이 해석은 OSV_RESOLVE=1)")
+
+
 # ---------------------------------------------------------------- 메인
 
 def print_summary():
@@ -261,6 +314,7 @@ def main():
     run_gitleaks(target)
     run_pip_audit(target)
     run_npm_audit(target)
+    run_osv_scanner(target)
 
     (OUT_DIR / "summary.json").write_text(
         json.dumps({"target": str(target), "results": results}, ensure_ascii=False, indent=1),

@@ -123,13 +123,16 @@ description: 소스 코드의 보안 취약점을 체계적으로 탐지하고, 
 
 `python tools/run_sast.py <대상경로>` 가 언어를 감지해 설치된 도구만 실행하고 결과를 `reports/.sast/` 에 모읍니다.
 
-- **Semgrep** (범용, 다언어): 보안 룰셋 `p/security-audit`, `p/owasp-top-ten`.
+- **Semgrep** (범용, 다언어): 룰셋 `p/security-audit`, `p/owasp-top-ten`, `p/default`. (`SEMGREP_CONFIGS="p/a,p/b"` 로 교체 가능.
+  샘플 벤치 결과 `p/secrets`·`p/jwt`·`p/cwe-top-25`·`p/xss` 등은 이 셋과 겹쳐 추가 탐지가 없었음)
 - **Bandit** (Python): 파이썬 보안 린터.
 - **Gitleaks** (전 언어): 하드코딩된 비밀 탐지.
 - **npm audit / pip-audit** (의존성): 알려진 CVE 점검. (대상 코드 실행 방지를 위해 의존성 해석 없이 실행 → 락파일/버전 고정 필요)
-- **Java/Kotlin 의존성**: 자동 감사 도구가 연동돼 있지 않습니다. `pom.xml`/`build.gradle` 의 버전을 직접 읽고
-  알려진 중대 CVE(예: log4j-core < 2.17.1 Log4Shell, jackson-databind 2.9.x 역직렬화, snakeyaml < 2.0, Spring Framework < 5.3.18 Spring4Shell,
-  commons-text < 1.10, commons-collections 3.x)를 대조합니다. 확신이 없으면 확신도 "추정"으로 보고하고 OWASP Dependency-Check 실행을 권고합니다.
+- **osv-scanner** (Java/Kotlin 의존성 + 대체 수단): `pom.xml`, `gradle.lockfile` 등을 OSV 데이터베이스로 감사합니다.
+  기본은 직접 의존성만(`--no-resolve`) — 전이 해석은 매니페스트에 적힌 저장소로 네트워크 요청을 보내므로 신뢰할 수 있는 대상에서만 `OSV_RESOLVE=1`.
+  pip-audit/npm 이 없을 때 Python/JS 락파일도 대신 감사합니다.
+  osv-scanner 마저 없으면 `pom.xml`/`build.gradle` 의 버전을 직접 읽고 알려진 중대 CVE(log4j-core < 2.17.1 Log4Shell, jackson-databind 2.9.x,
+  snakeyaml < 2.0, Spring Framework < 5.3.18 Spring4Shell, commons-text < 1.10, commons-collections 3.x)를 대조하고 확신도 "추정"으로 보고합니다.
 
 결과 읽는 순서:
 1. 먼저 stdout 요약 표와 `reports/.sast/summary.json` 으로 **어떤 도구가 실행/실패/건너뜀** 인지 확인한다.
