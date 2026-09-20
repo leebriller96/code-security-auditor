@@ -51,7 +51,7 @@ cp -r examples/vulnerable-express input/     # PowerShell: Copy-Item -Recurse ex
 |------|-----------|---------------------|-----------|
 | Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`) | 6 | #2 명령주입, #3 eval, #5 XSS(×2 룰), #6 Path Traversal, #10 CORS | **#1 SQLi(템플릿 리터럴)**, #4 JWT, #7 IDOR, #8 Mass Assignment, #9 쿠키, #11 비밀, #12 Open Redirect |
 | Gitleaks 8.30 | 1 | #11 중 Stripe 키 | `JWT_SECRET`, `DB_PASSWORD` (일반 문자열이라 패턴 미매칭) |
-| npm audit | — | 검증 당시 레지스트리 점검(503)으로 미실행. 러너는 이를 "실패" 로 정확히 보고함 | — |
+| npm audit | 9 | 의존성 CVE 전부 (express 전이 의존성 6건 포함) | — (코드 취약점은 대상 아님) |
 
 → 12건 중 **7건은 어떤 SAST 도 못 잡음.** Python 샘플보다 Claude 분석 의존도가 훨씬 높은 샘플.
 
@@ -60,3 +60,11 @@ cp -r examples/vulnerable-express input/     # PowerShell: Copy-Item -Recurse ex
 - "반드시" 12건 중 **11건 이상** 탐지, 그중 IDOR(#7)·Mass Assignment(#8)·JWT(#4)는 필수 (로직/설정 취약점이라 SAST 가 못 잡는 영역).
 - 심각도가 기대치와 한 단계 이상 차이 나는 항목이 3건 이하.
 - 방법론 준수 항목 4개 모두 충족.
+
+## 검증 기록
+
+| 일자(KST) | 모드 / 도구 | 결과 | 비고 |
+|-----------|-------------|------|------|
+| 2026-09-20 | hybrid / Semgrep 1.177 + Gitleaks 8.30 + npm audit + Claude | **합격** — 필수 12/12, 심각도 불일치 1건(#8 Mass Assignment → Critical: `SET ?` 로 `role` 직접 변경이 한 요청으로 끝나 상향), 방법론 4/4 | "있으면 좋은" 5건 중 4건도 보고(ReDoS, 에러 노출, 의존성, cookie-parser). JWT `exp` 미설정은 F-002 안에 포함. npm audit 9건 정상(레지스트리 복구 후). 결과물: `sample_report.md` |
+
+`sample_report.md` 는 이 검증에서 실제로 생성된 레포트입니다. (`python tools/build_report.py examples/vulnerable-express/sample_report.md` 로 HTML 생성 가능)
