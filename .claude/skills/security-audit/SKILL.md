@@ -127,6 +127,9 @@ description: 소스 코드의 보안 취약점을 체계적으로 탐지하고, 
 - **Bandit** (Python): 파이썬 보안 린터.
 - **Gitleaks** (전 언어): 하드코딩된 비밀 탐지.
 - **npm audit / pip-audit** (의존성): 알려진 CVE 점검. (대상 코드 실행 방지를 위해 의존성 해석 없이 실행 → 락파일/버전 고정 필요)
+- **Java/Kotlin 의존성**: 자동 감사 도구가 연동돼 있지 않습니다. `pom.xml`/`build.gradle` 의 버전을 직접 읽고
+  알려진 중대 CVE(예: log4j-core < 2.17.1 Log4Shell, jackson-databind 2.9.x 역직렬화, snakeyaml < 2.0, Spring Framework < 5.3.18 Spring4Shell,
+  commons-text < 1.10, commons-collections 3.x)를 대조합니다. 확신이 없으면 확신도 "추정"으로 보고하고 OWASP Dependency-Check 실행을 권고합니다.
 
 결과 읽는 순서:
 1. 먼저 stdout 요약 표와 `reports/.sast/summary.json` 으로 **어떤 도구가 실행/실패/건너뜀** 인지 확인한다.

@@ -119,6 +119,7 @@ code-security-auditor/
 ├── templates/auditignore.example     # .auditignore 형식 예시
 ├── examples/vulnerable-flask/        # 검증용 샘플 취약 앱(Python) + 기대 발견 목록 + 샘플 레포트
 ├── examples/vulnerable-express/      # 검증용 샘플 취약 앱(JavaScript) + 기대 발견 목록
+├── examples/vulnerable-spring/       # 검증용 샘플 취약 앱(Java/Spring) + 기대 발견 목록
 ├── input/                            # 분석 대상 코드 투입 (git 무시)
 ├── reports/                          # 생성 레포트 출력 (git 무시)
 └── CLAUDE.md                         # 프로젝트 규칙/컨텍스트
@@ -141,6 +142,7 @@ python tools/selftest.py
 |------|----------------|-----------|------|
 | `examples/vulnerable-flask/` | Python / Flask | 10건 | Bandit·pip-audit 경로 검증. 실제 생성 레포트(`sample_report.md`) 포함 |
 | `examples/vulnerable-express/` | JavaScript / Express | 12건 | npm audit 경로 검증. JWT·CORS·Mass Assignment 등 로직/설정 취약점 비중 높음 |
+| `examples/vulnerable-spring/` | Java / Spring Boot | 12건 | Semgrep Java 룰셋 검증. XXE·역직렬화·SSRF 포함. `pom.xml` 의존성(Log4Shell 등)은 도구 없이 Claude 가 판단 |
 
 ```bash
 cp -r examples/vulnerable-flask input/     # PowerShell: Copy-Item -Recurse examples/vulnerable-flask input/
