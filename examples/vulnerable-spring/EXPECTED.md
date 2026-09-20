@@ -60,3 +60,11 @@ cp -r examples/vulnerable-spring input/     # PowerShell: Copy-Item -Recurse exa
 - "있으면 좋은" 항목 중 **log4j-core 2.14.1 (Log4Shell) 은 필수**.
 - 심각도가 기대치와 한 단계 이상 차이 나는 항목이 3건 이하.
 - 방법론 준수 항목 4개 모두 충족.
+
+## 검증 기록
+
+| 일자(KST) | 모드 / 도구 | 결과 | 비고 |
+|-----------|-------------|------|------|
+| 2026-09-20 | hybrid / Semgrep 1.177 + Gitleaks 8.30 + Claude | **합격** — 필수 12/12, **Log4Shell 탐지(도구 없이 pom 대조, Critical)**, 심각도 불일치 0건(#12 설정은 비밀/운영설정 2건으로 분리 보고), 방법론 4/4 | "있으면 좋은" 4건 전부 보고. Spring Security 설정 부재를 범위 섹션에 명시하고 CSRF 는 검토 제외로 처리. 결과물: `sample_report.md` |
+
+`sample_report.md` 는 이 검증에서 실제로 생성된 레포트입니다. (`python tools/build_report.py examples/vulnerable-spring/sample_report.md` 로 HTML 생성 가능)

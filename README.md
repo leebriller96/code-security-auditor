@@ -140,7 +140,7 @@ python tools/selftest.py
 
 | 샘플 | 언어/프레임워크 | 기대 항목 | 특징 |
 |------|----------------|-----------|------|
-| `examples/vulnerable-flask/` | Python / Flask | 10건 | Bandit·pip-audit 경로 검증. 실제 생성 레포트(`sample_report.md`) 포함 |
+| `examples/vulnerable-flask/` | Python / Flask | 10건 | Bandit·pip-audit 경로 검증 |
 | `examples/vulnerable-express/` | JavaScript / Express | 12건 | npm audit 경로 검증. JWT·CORS·Mass Assignment 등 로직/설정 취약점 비중 높음 |
 | `examples/vulnerable-spring/` | Java / Spring Boot | 12건 | Semgrep Java 룰셋 검증. XXE·역직렬화·SSRF 포함. `pom.xml` 의존성(Log4Shell 등)은 도구 없이 Claude 가 판단 |
 
@@ -149,6 +149,8 @@ cp -r examples/vulnerable-flask input/     # PowerShell: Copy-Item -Recurse exam
 # Claude Code 에서:
 /scan
 ```
+
+세 샘플 모두 hybrid 모드 E2E 검증을 통과했으며, 각 디렉토리의 `sample_report.md` 가 그때 실제로 생성된 레포트입니다(형식·서술 수준 참고용).
 
 ## 주의사항
 
