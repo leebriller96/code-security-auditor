@@ -123,7 +123,8 @@ description: 소스 코드의 보안 취약점을 체계적으로 탐지하고, 
 
 `python tools/run_sast.py <대상경로>` 가 언어를 감지해 설치된 도구만 실행하고 결과를 `reports/.sast/` 에 모읍니다.
 
-- **Semgrep** (범용, 다언어): 보안 룰셋 `p/security-audit`, `p/owasp-top-ten`.
+- **Semgrep** (범용, 다언어): 룰셋 `p/security-audit`, `p/owasp-top-ten`, `p/default`. (`SEMGREP_CONFIGS="p/a,p/b"` 로 교체 가능.
+  샘플 벤치 결과 `p/secrets`·`p/jwt`·`p/cwe-top-25`·`p/xss` 등은 이 셋과 겹쳐 추가 탐지가 없었음)
 - **Bandit** (Python): 파이썬 보안 린터.
 - **Gitleaks** (전 언어): 하드코딩된 비밀 탐지.
 - **npm audit / pip-audit** (의존성): 알려진 CVE 점검. (대상 코드 실행 방지를 위해 의존성 해석 없이 실행 → 락파일/버전 고정 필요)

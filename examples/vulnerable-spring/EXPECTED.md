@@ -48,7 +48,7 @@ osv-scanner 가 없으면 **Claude 가 버전을 직접 읽고 알려진 CVE 를
 
 | 도구 | 보고 건수 | 필수 항목 중 잡은 것 | 못 잡은 것 |
 |------|-----------|---------------------|-----------|
-| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`) | 10 | #1 SQLi(×2 룰), #2 명령주입, #3 역직렬화, #4 XXE, #6 Path Traversal(×2), #9 SHA-1, #11 Open Redirect, #12 중 Actuator | **#5 SSRF**, #7 IDOR, #8 Mass Assignment, #10 XSS, #12 중 비밀·스택트레이스·H2 |
+| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`; `p/default` 추가 전) | 10 | #1 SQLi(×2 룰), #2 명령주입, #3 역직렬화, #4 XXE, #6 Path Traversal(×2), #9 SHA-1, #11 Open Redirect, #12 중 Actuator | **#5 SSRF**, #7 IDOR, #8 Mass Assignment, #10 XSS, #12 중 비밀·스택트레이스·H2 |
 | Gitleaks 8.30 | 0 | — | `application.properties` 의 비밀번호는 일반 문자열이라 패턴 미매칭 |
 | osv-scanner 2.6 (`--no-resolve`) | 19 | log4j-core(Log4Shell CVE-2021-44228 Critical), jackson-databind, snakeyaml 전부 | 전이 의존성(Spring4Shell 등)은 `OSV_RESOLVE=1` 일 때만 |
 

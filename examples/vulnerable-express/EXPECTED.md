@@ -49,7 +49,7 @@ cp -r examples/vulnerable-express input/     # PowerShell: Copy-Item -Recurse ex
 
 | 도구 | 보고 건수 | 필수 항목 중 잡은 것 | 못 잡은 것 |
 |------|-----------|---------------------|-----------|
-| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`) | 6 | #2 명령주입, #3 eval, #5 XSS(×2 룰), #6 Path Traversal, #10 CORS | **#1 SQLi(템플릿 리터럴)**, #4 JWT, #7 IDOR, #8 Mass Assignment, #9 쿠키, #11 비밀, #12 Open Redirect |
+| Semgrep 1.177 (`p/security-audit`, `p/owasp-top-ten`; `p/default` 추가 전) | 6 | #2 명령주입, #3 eval, #5 XSS(×2 룰), #6 Path Traversal, #10 CORS | **#1 SQLi(템플릿 리터럴)**, #4 JWT, #7 IDOR, #8 Mass Assignment, #9 쿠키, #11 비밀, #12 Open Redirect |
 | Gitleaks 8.30 | 1 | #11 중 Stripe 키 | `JWT_SECRET`, `DB_PASSWORD` (일반 문자열이라 패턴 미매칭) |
 | npm audit | 9 | 의존성 CVE 전부 (express 전이 의존성 6건 포함) | — (코드 취약점은 대상 아님) |
 

@@ -115,19 +115,30 @@ def run_semgrep(target: Path):
         return record(tool, "미설치", reason="설치: pip install semgrep (윈도우 네이티브 동작 확인: 1.177)")
     print(f"[run_sast] Semgrep 실행 중... (룰셋을 네트워크에서 받으므로 시간이 걸릴 수 있음)")
     out, log = OUT_DIR / "semgrep.json", OUT_DIR / "semgrep.log"
-    cmd = ["semgrep", "--config", "p/security-audit", "--config", "p/owasp-top-ten",
-           "--json", "--quiet"]
+    # 기본 룰셋 3종. 세 샘플 앱 벤치(2026-09): p/secrets·p/jwt·p/cwe-top-25·p/xss 등은 추가 탐지 0건이라 제외,
+    # p/default 는 CSRF 미들웨어·eval 등 +5건. 바꾸려면 SEMGREP_CONFIGS="p/a,p/b" (쉼표 구분).
+    configs = [c.strip() for c in os.environ.get("SEMGREP_CONFIGS", "p/security-audit,p/owasp-top-ten,p/default").split(",") if c.strip()]
+    cmd = ["semgrep", "--json", "--quiet", "--metrics=off"]
+    for c in configs:
+        cmd += ["--config", c]
     for d in EXCLUDE_DIRS:
         cmd += ["--exclude", d]
     cmd.append(str(target))
     rc, stdout = run(cmd, log)
     data = save_json_stdout(stdout, out) if stdout else None
     if data is None:
-        return record(tool, "실패", reason=f"JSON 결과 없음 (exit={rc}). {log.name} 확인 (네트워크/룰셋 오류 가능)")
+        hint = "존재하지 않는 룰셋 이름 또는 네트워크 오류 가능"
+        return record(tool, "실패", reason=f"JSON 결과 없음 (exit={rc}). {log.name} 확인 ({hint})")
     n = len(data.get("results", []))
-    errs = len(data.get("errors", []))
-    return record(tool, "실행", output=out, findings=n,
-                  reason=f"내부 오류 {errs}건 (파싱 실패 파일 등)" if errs else "")
+    errs = data.get("errors", [])
+    # 룰셋 로딩 실패는 결과가 0건으로 조용히 끝나므로 오류 목록에서 골라내 명시한다.
+    cfg_errs = [e for e in errs if "configuration" in str(e.get("message", "")).lower()
+                or "config" in str(e.get("type", "")).lower()]
+    if cfg_errs:
+        msg = str(cfg_errs[0].get("message") or cfg_errs[0].get("long_msg") or cfg_errs[0])[:150]
+        return record(tool, "실패", reason=f"룰셋 오류: {msg}")
+    return record(tool, "실행", output=out, findings=n, extra={"configs": configs},
+                  reason=f"내부 오류 {len(errs)}건 (파싱 실패 파일 등)" if errs else "")
 
 
 def run_bandit(target: Path):
