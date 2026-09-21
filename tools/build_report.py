@@ -136,6 +136,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   apply();
 }})();
 </script>
+<script>
+  // mermaid 다이어그램(ERD·구성도)이 있으면 CDN 에서 로드해 렌더링한다. 오프라인이면 소스 텍스트가 그대로 보인다.
+  if (document.querySelector('pre.mermaid')) {{
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
+    s.onload = function () {{ mermaid.initialize({{ startOnLoad: false, theme: 'neutral' }}); mermaid.run({{ querySelector: 'pre.mermaid' }}); }};
+    document.body.appendChild(s);
+  }}
+</script>
 </body>
 </html>
 """
