@@ -88,7 +88,10 @@ def parse_report(md_text: str):
             "id": h.group(1),
             "title": h.group(2).strip(),
             "severity": severity,
-            "confidence": next((c for c in ("확실", "높음", "추정") if c in fields.get("확신도", "")), ""),
+            # 확신도는 필드 값의 **첫 토큰**으로 판정한다 — "높음 (… 확실히 …)" 처럼 설명 문구에 다른 등급 단어가 섞여도 오인하지 않게.
+            "confidence": next((c for c in ("확실", "높음", "추정")
+                                if re.match(rf"^\s*\*{{0,2}}{c}", fields.get("확신도", ""))), "") or
+                          next((c for c in ("확실", "높음", "추정") if c in fields.get("확신도", "")), ""),
             "cwe": CWE.findall(fields.get("분류", "")),
             # "A05:2025 (구 A03:2021)" 처럼 병기된 경우 최신 판(2025) ID 만 남긴다
             "owasp": [o for o in OWASP.findall(fields.get("분류", "")) if o.endswith(":2025")]
