@@ -214,9 +214,36 @@ def run_npm_audit(target: Path):
         return record(tool, "건너뜀", reason="package.json 없음")
     if not have("npm"):
         return record(tool, "미설치", reason="설치: https://nodejs.org")
+    # pnpm 워크스페이스: 락파일은 워크스페이스 루트(pnpm-lock.yaml)에만 있고 하위 패키지에는 없다.
+    # → 루트에서 `pnpm audit --json` 1회(워크스페이스 전체), 하위 패키지는 "루트에서 감사됨" 으로 표시.
+    pnpm_roots = {lock.parent for lock in find_files(target, "pnpm-lock.yaml")}
+    pnpm_cmd = have("pnpm") or (have("corepack") and [have("corepack"), "pnpm"])
     for i, pkg in enumerate(pkg_files):
         rel = pkg.relative_to(target)
         pkg_dir = pkg.parent
+        covered = next((r for r in pnpm_roots if pkg_dir != r and r in pkg_dir.parents), None)
+        if covered is not None:
+            record(tool, "건너뜀", extra={"file": str(rel)},
+                   reason=f"pnpm 워크스페이스 루트({covered.relative_to(target)}/pnpm-lock.yaml)에서 감사됨")
+            continue
+        if pkg_dir in pnpm_roots:
+            if not pnpm_cmd:
+                record(tool, "미설치", extra={"file": str(rel)}, reason="pnpm-lock.yaml 있으나 pnpm/corepack 없음")
+                continue
+            print(f"[run_sast] pnpm audit(의존성, 워크스페이스) 실행 중... {rel}")
+            suffix = "" if i == 0 else f"_{i}"
+            out, log = OUT_DIR / f"npm-audit{suffix}.json", OUT_DIR / f"npm-audit{suffix}.log"
+            cmd = (pnpm_cmd if isinstance(pnpm_cmd, list) else [pnpm_cmd]) + ["audit", "--json"]
+            rc, stdout = run(cmd, log, cwd=pkg_dir)
+            data = save_json_stdout(stdout, out) if stdout else None
+            if data is None:
+                record(tool, "실패", extra={"file": str(rel)}, reason=f"exit={rc}. {log.name} 확인")
+                continue
+            # pnpm audit --json 은 npm v6 형식(advisories/metadata.vulnerabilities)
+            advisories = data.get("advisories") or {}
+            record(tool, "실행", output=out, findings=len(advisories),
+                   extra={"file": str(rel), "runner": "pnpm audit"})
+            continue
         if not any((pkg_dir / lock).exists() for lock in ("package-lock.json", "npm-shrinkwrap.json")):
             record(tool, "건너뜀", extra={"file": str(rel)},
                    reason="락파일(package-lock.json) 없음 — npm audit 는 락파일이 필요함")

@@ -176,6 +176,19 @@ def parse_npm_audit(data, target, source_file):
                         source_file, None,
                         f"{name}@{v.get('range', '')} · {fix_txt} · {'; '.join(t for t in titles if t)}",
                         cwe_str(sorted(set(cwes)))))
+    # npm v6 / pnpm audit 형식: advisories{id: {module_name, severity, title, cwe, vulnerable_versions, patched_versions, findings[{version, paths, dev}]}}
+    for _id, adv in (data.get("advisories") or {}).items():
+        name = adv.get("module_name", "")
+        versions = sorted({f.get("version", "") for f in adv.get("findings", []) if f.get("version")})
+        dev = all(f.get("dev") for f in adv.get("findings", [])) if adv.get("findings") else False
+        cwe = adv.get("cwe") or []
+        if isinstance(cwe, str):
+            cwe = [cwe]
+        rows.append(row("npm-audit", name, sev_map.get(str(adv.get("severity", "")).lower(), "미정"),
+                        source_file, None,
+                        f"{name}@{','.join(versions)} (취약 {adv.get('vulnerable_versions', '')}, 패치 {adv.get('patched_versions', '')})"
+                        f"{' · devDependency' if dev else ''} · {adv.get('title', '')} · {adv.get('url', '')}",
+                        cwe_str(sorted(set(cwe)))))
     return rows
 
 
